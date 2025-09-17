@@ -28,15 +28,19 @@ Bangle.on('accel',function(a) {
 var connection;
 
 // Variables for calculating Messages/Second (Hz)
-var messageCount = 0;
-var startTime = null;
-var lastUpdateTime = 0;
+var messagesThisSecond = 0;
+var dataRateTimer = null;
 
 document.getElementById("btnConnect").addEventListener("click", function() {
   // disconnect if connected already
   if (connection) {
     connection.close();
     connection = undefined;
+    // Stop data rate timer if running
+    if (dataRateTimer) {
+      clearInterval(dataRateTimer);
+      dataRateTimer = null;
+    }
   }
   // Connect
   Puck.connect(function(c) {
@@ -45,12 +49,14 @@ document.getElementById("btnConnect").addEventListener("click", function() {
       return;
     }
     connection = c;
-    
     // Reset data rate counters for new connection
-    messageCount = 0;
-    startTime = null;
-    lastUpdateTime = 0;
+    messagesThisSecond = 0;
     document.getElementById("dataRate").textContent = "0.0";
+    // Start data rate timer
+    dataRateTimer = setInterval(function() {
+      document.getElementById("dataRate").textContent = messagesThisSecond.toFixed(1);
+      messagesThisSecond = 0;
+    }, 1000);
     
     // Handle the data we get back, and call 'onLine'
     // whenever we get a line
@@ -96,8 +102,8 @@ function onLine(line) {
     document.getElementById("valueY").textContent = accel.y;
     document.getElementById("valueZ").textContent = accel.z;
     
-    // Calculate and update data rate (Messages/Second)
-    updateDataRate();
+    // Count message for this second
+    messagesThisSecond++;
   }
 }
 // Set the position of each bar
@@ -111,32 +117,6 @@ function setBarPos(id,d) {
   } else { // less than 0
     s.left=(150+d)+"px";
     s.width=(-d)+"px";
-  }
-}
-
-// Calculate and update the data rate (Messages/Second in Hz)
-function updateDataRate() {
-  var currentTime = Date.now();
-  
-  // Initialize timing on first message
-  if (startTime === null) {
-    startTime = currentTime;
-    messageCount = 1;
-    return;
-  }
-  
-  // Increment message counter
-  messageCount++;
-  
-  // Update display every 1 second to avoid flickering
-  if (currentTime - lastUpdateTime >= 1000) {
-    var elapsedSeconds = (currentTime - startTime) / 1000;
-    var hz = messageCount / elapsedSeconds;
-    
-    // Display with 1 decimal place
-    document.getElementById("dataRate").textContent = hz.toFixed(1);
-    
-    lastUpdateTime = currentTime;
   }
 }
 </script>
