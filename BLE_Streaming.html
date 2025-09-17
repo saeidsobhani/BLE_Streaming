@@ -54,7 +54,7 @@ document.getElementById("btnConnect").addEventListener("click", function() {
     document.getElementById("dataRate").textContent = "0.0";
     // Start data rate timer
     dataRateTimer = setInterval(function() {
-      document.getElementById("dataRate").textContent = messagesThisSecond.toFixed(1);
+      document.getElementById("dataRate").textContent = messagesThisSecond;
       messagesThisSecond = 0;
     }, 1000);
     
