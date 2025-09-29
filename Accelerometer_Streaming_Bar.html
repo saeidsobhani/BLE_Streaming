@@ -16,9 +16,9 @@ var BANGLE_CODE = `
 Bangle.on('accel',function(a) {
   var d = [
     "A",
-    Math.round(a.x),
-    Math.round(a.y),
-    Math.round(a.z)
+    a.x,
+    a.y,
+    a.z
     ];
   Bluetooth.println(d.join(","));
 });
