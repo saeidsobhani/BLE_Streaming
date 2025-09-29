@@ -16,12 +16,12 @@ var BANGLE_CODE = `
 Bangle.on('accel',function(a) {
   var d = [
     "A",
-    Math.round(a.x*100),
-    Math.round(a.y*100),
-    Math.round(a.z*100)
+    Math.round(a.x),
+    Math.round(a.y),
+    Math.round(a.z)
     ];
   Bluetooth.println(d.join(","));
-})
+});
 `;
 
 // When we click the connect button...
@@ -87,9 +87,9 @@ function onLine(line) {
   if (d.length==4 && d[0]=="A") {
     // we have an accelerometer reading
     var accel = {
-      x : parseInt(d[1]),
-      y : parseInt(d[2]),
-      z : parseInt(d[3]),
+      x : parseFloat(d[1]),
+      y : parseFloat(d[2]),
+      z : parseFloat(d[3]),
     };    
     
     // Update bar positions
@@ -109,14 +109,19 @@ function onLine(line) {
 // Set the position of each bar
 function setBarPos(id,d) {
   var s = document.getElementById(id).style;
-  if (d>150) d=150;
-  if (d<-150) d=-150;
-  if (d>=0) {
-    s.left="150px";
-    s.width=d+"px";
+  // Scale accelerometer values from -2g to +2g range to bar width
+  var scaledValue = (d / 2) * 150;
+  
+  // Clamp values to bar limits
+  if (scaledValue > 150) scaledValue = 150;
+  if (scaledValue < -150) scaledValue = -150;
+  
+  if (scaledValue >= 0) {
+    s.left = "150px";
+    s.width = scaledValue + "px";
   } else { // less than 0
-    s.left=(150+d)+"px";
-    s.width=(-d)+"px";
+    s.left = (150 + scaledValue) + "px";
+    s.width = (-scaledValue) + "px";
   }
 }
 </script>
