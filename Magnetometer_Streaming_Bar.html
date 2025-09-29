@@ -110,16 +110,8 @@ function onLine(line) {
 // Set the position of each bar
 function setBarPos(id,d) {
   var s = document.getElementById(id).style;
-  // Scale magnetometer values based on observed ranges near speaker:
-  // X: -5000 to +11000, Y: -1500 to +9000, Z: -9000 to +2500
-  var scaledValue;
-  if (id === "barX") {
-    scaledValue = (d / 8000) * 150; // Scale X range (-8000 to +8000) to bar width
-  } else if (id === "barY") {
-    scaledValue = (d / 5250) * 150; // Scale Y range (-5250 to +5250) to bar width  
-  } else { // barZ
-    scaledValue = ((d + 3250) / 5750) * 150 - 75; // Scale Z range (-9000 to +2500) to bar width
-  }
+  // Scale all magnetometer values from -10000 to +10000 range to bar width
+  var scaledValue = (d / 10000) * 150;
   
   // Clamp values to bar limits
   if (scaledValue > 150) scaledValue = 150;
