@@ -13,6 +13,7 @@
 <script>
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
+Bangle.setCompassPower(1);
 Bangle.on('mag',function(m) {
   var d = [
     "M",
