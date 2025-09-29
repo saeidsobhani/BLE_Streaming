@@ -17,12 +17,12 @@ Bangle.setCompassPower(1);
 Bangle.on('mag',function(m) {
   var d = [
     "M",
-    Math.round(m.x*100),
-    Math.round(m.y*100),
-    Math.round(m.z*100)
+    m.x,
+    m.y,
+    m.z
     ];
   Bluetooth.println(d.join(","));
-})
+});
 `;
 
 // When we click the connect button...
@@ -88,9 +88,9 @@ function onLine(line) {
   if (d.length==4 && d[0]=="M") {
     // we have a magnetometer reading
     var mag = {
-      x : parseInt(d[1]),
-      y : parseInt(d[2]),
-      z : parseInt(d[3]),
+      x : parseFloat(d[1]),
+      y : parseFloat(d[2]),
+      z : parseFloat(d[3]),
     };    
     
     // Update bar positions
@@ -110,14 +110,16 @@ function onLine(line) {
 // Set the position of each bar
 function setBarPos(id,d) {
   var s = document.getElementById(id).style;
-  if (d>150) d=150;
-  if (d<-150) d=-150;
-  if (d>=0) {
+  // Scale magnetometer values (typically -1 to +1) to bar width
+  var scaledValue = d * 150;
+  if (scaledValue>150) scaledValue=150;
+  if (scaledValue<-150) scaledValue=-150;
+  if (scaledValue>=0) {
     s.left="150px";
-    s.width=d+"px";
+    s.width=scaledValue+"px";
   } else { // less than 0
-    s.left=(150+d)+"px";
-    s.width=(-d)+"px";
+    s.left=(150+scaledValue)+"px";
+    s.width=(-scaledValue)+"px";
   }
 }
 </script>
