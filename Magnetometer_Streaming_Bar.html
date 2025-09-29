@@ -22,7 +22,7 @@ Bangle.on('mag',function(m) {
     m.z
     ];
   Bluetooth.println(d.join(","));
-});
+})
 `;
 
 // When we click the connect button...
@@ -110,16 +110,27 @@ function onLine(line) {
 // Set the position of each bar
 function setBarPos(id,d) {
   var s = document.getElementById(id).style;
-  // Scale magnetometer values (typically -1 to +1) to bar width
-  var scaledValue = d * 150;
-  if (scaledValue>150) scaledValue=150;
-  if (scaledValue<-150) scaledValue=-150;
-  if (scaledValue>=0) {
-    s.left="150px";
-    s.width=scaledValue+"px";
+  // Scale magnetometer values based on observed ranges:
+  // X: -300 to +400, Y: -600 to +300, Z: 0 to +700
+  var scaledValue;
+  if (id === "barX") {
+    scaledValue = (d / 400) * 150; // Scale X range (-400 to +400) to bar width
+  } else if (id === "barY") {
+    scaledValue = (d / 600) * 150; // Scale Y range (-600 to +600) to bar width  
+  } else { // barZ
+    scaledValue = ((d - 350) / 350) * 150; // Scale Z range (0 to +700, center at 350) to bar width
+  }
+  
+  // Clamp values to bar limits
+  if (scaledValue > 150) scaledValue = 150;
+  if (scaledValue < -150) scaledValue = -150;
+  
+  if (scaledValue >= 0) {
+    s.left = "150px";
+    s.width = scaledValue + "px";
   } else { // less than 0
-    s.left=(150+scaledValue)+"px";
-    s.width=(-scaledValue)+"px";
+    s.left = (150 + scaledValue) + "px";
+    s.width = (-scaledValue) + "px";
   }
 }
 </script>
