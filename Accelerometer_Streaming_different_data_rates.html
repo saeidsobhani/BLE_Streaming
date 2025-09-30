@@ -1,0 +1,187 @@
+<html>
+ <head>
+  <title>Bangle.js Accelerometer streaming</title>
+ </head>
+ <body>
+
+<script src="https://www.puck-js.com/puck.js"></script>
+<button id="btnConnect">Connect</button>
+<p>
+  <label for="dataRateSelect">Target Data Rate: </label>
+  <select id="dataRateSelect">
+    <option value="12.5">12.5 Hz</option>
+    <option value="25" selected>25 Hz</option>
+    <option value="50">50 Hz</option>
+    <option value="80">80 Hz</option>
+    <option value="100">100 Hz</option>
+  </select>
+</p>
+<p>X: <span class="bar"><span id="barX"></span></span> <span id="valueX">0</span></p>
+<p>Y: <span class="bar"><span id="barY"></span></span> <span id="valueY">0</span></p>
+<p>Z: <span class="bar"><span id="barZ"></span></span> <span id="valueZ">0</span></p>
+<p><strong>Actual Data Rate: <span id="dataRate">0</span> Hz</strong></p>
+<script>
+// Code to upload to Bangle.js
+function getBangleCode(dataRate) {
+  var pollInterval = Math.round(1000 / dataRate); // Convert Hz to milliseconds
+  return `
+// Set the accelerometer poll interval based on desired data rate
+Bangle.setPollInterval(${pollInterval});
+Bangle.on('accel',function(a) {
+  var d = [
+    "A",
+    a.x,
+    a.y,
+    a.z
+    ];
+  Bluetooth.println(d.join(","));
+});
+`;
+}
+
+// When we click the connect button...
+var connection;
+
+// Variables for calculating Messages/Second (Hz)
+var messagesThisSecond = 0;
+var dataRateTimer = null;
+
+document.getElementById("btnConnect").addEventListener("click", function() {
+  // disconnect if connected already
+  if (connection) {
+    connection.close();
+    connection = undefined;
+    // Stop data rate timer if running
+    if (dataRateTimer) {
+      clearInterval(dataRateTimer);
+      dataRateTimer = null;
+    }
+  }
+  // Connect
+  Puck.connect(function(c) {
+    if (!c) {
+      alert("Couldn't connect!");
+      return;
+    }
+    connection = c;
+    // Reset data rate counters for new connection
+    messagesThisSecond = 0;
+    document.getElementById("dataRate").textContent = "0.0";
+    // Start data rate timer with more precise calculation
+    dataRateTimer = setInterval(function() {
+      document.getElementById("dataRate").textContent = messagesThisSecond.toFixed(1);
+      messagesThisSecond = 0;
+    }, 1000);
+    
+    // Handle the data we get back, and call 'onLine'
+    // whenever we get a line
+    var buf = "";
+    connection.on("data", function(d) {
+      buf += d;
+      var l = buf.split("\n");
+      buf = l.pop();
+      l.forEach(onLine);
+    });
+    // First, reset the Bangle
+    connection.write("reset();\n", function() {
+      // Wait for it to reset itself
+      setTimeout(function() {
+        // Get the selected data rate and generate the code
+        var selectedRate = parseFloat(document.getElementById("dataRateSelect").value);
+        var bangleCode = getBangleCode(selectedRate);
+        // Now upload our code to it
+        connection.write("\x03\x10if(1){"+bangleCode+"}\n",
+          function() { console.log("Ready... Target rate: " + selectedRate + " Hz"); });
+      }, 1500);
+    });
+  });
+});
+
+// Add event listener for data rate changes
+document.getElementById("dataRateSelect").addEventListener("change", function() {
+  // If we're connected, reconnect with new data rate
+  if (connection) {
+    var selectedRate = parseFloat(this.value);
+    console.log("Changing data rate to: " + selectedRate + " Hz");
+    
+    // Generate new code with the selected data rate
+    var bangleCode = getBangleCode(selectedRate);
+    
+    // Upload new code to the Bangle
+    connection.write("reset();\n", function() {
+      setTimeout(function() {
+        connection.write("\x03\x10if(1){"+bangleCode+"}\n", function() {
+          console.log("Data rate updated to: " + selectedRate + " Hz");
+        });
+      }, 1000);
+    });
+  }
+});
+
+// When we get a line of data, check it and if it's
+// from the accelerometer, update it
+function onLine(line) {
+  console.log("RECEIVED:"+line);
+  var d = line.split(",");
+  if (d.length==4 && d[0]=="A") {
+    // we have an accelerometer reading
+    var accel = {
+      x : parseFloat(d[1]),
+      y : parseFloat(d[2]),
+      z : parseFloat(d[3]),
+    };    
+    
+    // Update bar positions
+    setBarPos("barX", accel.x);
+    setBarPos("barY", accel.y);
+    setBarPos("barZ", accel.z);
+    
+    // Update numeric values displayed next to bars
+    document.getElementById("valueX").textContent = accel.x;
+    document.getElementById("valueY").textContent = accel.y;
+    document.getElementById("valueZ").textContent = accel.z;
+    
+    // Count message for this second
+    messagesThisSecond++;
+  }
+}
+// Set the position of each bar
+function setBarPos(id,d) {
+  var s = document.getElementById(id).style;
+  // Scale accelerometer values from -2g to +2g range to bar width
+  var scaledValue = (d / 2) * 150;
+  
+  // Clamp values to bar limits
+  if (scaledValue > 150) scaledValue = 150;
+  if (scaledValue < -150) scaledValue = -150;
+  
+  if (scaledValue >= 0) {
+    s.left = "150px";
+    s.width = scaledValue + "px";
+  } else { // less than 0
+    s.left = (150 + scaledValue) + "px";
+    s.width = (-scaledValue) + "px";
+  }
+}
+</script>
+<style>
+/* Styles just to make the bars for X Y and Z look neat */
+.bar {
+  width : 500px;
+  height: 24px;
+  background-color : #D0D0D0;
+  position:relative;
+  display: inline-block;
+}
+.bar span {
+  width : 1px;
+  height: 20px;
+  background-color : red;
+  position:absolute;
+  display: inline-block;
+  left: 150px;
+  top: 2px;
+}
+</style>
+ </body>
+</html>
