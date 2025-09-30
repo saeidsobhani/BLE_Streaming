@@ -13,8 +13,8 @@
 <script>
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
-// Set accelerometer to higher frequency (12.5Hz, 26Hz, 52Hz, 104Hz, 208Hz, 416Hz, 833Hz, 1660Hz)
-Bangle.setOptions({accelInterval: 12}); // 12ms = ~83Hz sampling rate
+// Set the poll interval for accelerometer
+Bangle.setPollInterval(20); // 20ms = 50Hz
 
 Bangle.on('accel',function(a) {
   var d = [
@@ -24,8 +24,7 @@ Bangle.on('accel',function(a) {
     a.z
     ];
   Bluetooth.println(d.join(","));
-})
-`;
+})`;
 
 // When we click the connect button...
 var connection;
