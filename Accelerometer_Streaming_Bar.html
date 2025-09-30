@@ -13,6 +13,9 @@
 <script>
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
+// Set accelerometer to higher frequency (12.5Hz, 26Hz, 52Hz, 104Hz, 208Hz, 416Hz, 833Hz, 1660Hz)
+Bangle.setOptions({accelInterval: 12}); // 12ms = ~83Hz sampling rate
+
 Bangle.on('accel',function(a) {
   var d = [
     "A",
