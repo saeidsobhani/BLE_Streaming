@@ -8,7 +8,7 @@ function onMag(d) {
   if (connected) {
     NRF.updateServices({
       'f8b23a4d-89ad-4220-8c9f-d81756009f0c': {
-        'f8b23a4d-89ad-4220-8c9f-d81756009f0c': {
+        'f8b23a4d-89ad-4220-8c9f-d81756009f0e': {
           value: new Int32Array([d.x, d.y, d.z]).buffer,
           notify: true
         }
@@ -48,7 +48,7 @@ function onInit() {
 
   NRF.setServices({
     'f8b23a4d-89ad-4220-8c9f-d81756009f0c': {
-      'f8b23a4d-89ad-4220-8c9f-d81756009f0c': {
+      'f8b23a4d-89ad-4220-8c9f-d81756009f0e': {
         description: 'Magnetometer',
         notify: true,
         readable: true,
@@ -68,6 +68,12 @@ function onInit() {
         value: new Float32Array([0, 0, 0]).buffer
       }
     }
+  });
+
+  // Advertise the service so it can be discovered
+  NRF.setAdvertising({}, {
+    name: "Bangle.js Sensor",
+    services: ['f8b23a4d-89ad-4220-8c9f-d81756009f0c']
   });
 
   Bangle.on('accel', onAccel);
