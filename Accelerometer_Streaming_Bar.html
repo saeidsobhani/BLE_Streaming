@@ -14,7 +14,7 @@
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
 // Set the poll interval for accelerometer
-Bangle.setPollInterval(80); // 80ms = 12.5Hz
+Bangle.setPollInterval(20); // 20ms = 50Hz
 Bangle.on('accel',function(a) {
   var d = [
     "A",
