@@ -77,8 +77,8 @@ document.getElementById("btnConnect").addEventListener("click", function() {
         connection.write("\x03\x10if(1){"+BANGLE_CODE+"}\n",
           function() { 
             console.log("Ready..."); 
-            // Set magnetometer to 100 Hz ODR (try register 0x31 for CNTL1 with TM=1)
-            connection.write("Bangle.compassWr(0x31, 0xE2);\n", function() {});
+            // Set magnetometer to 100 Hz ODR (MODE=08h for continuous 100Hz)
+            connection.write("Bangle.compassWr(0x31, 0x08);\n", function() {});
           });
       }, 1500);
     });
