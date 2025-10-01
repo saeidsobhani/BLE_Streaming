@@ -14,6 +14,7 @@
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
 Bangle.setCompassPower(1);
+Bangle.setPollInterval(10); // 10ms = 100Hz
 Bangle.on('mag',function(m) {
   var d = [
     "M",
@@ -74,7 +75,11 @@ document.getElementById("btnConnect").addEventListener("click", function() {
       setTimeout(function() {
         // Now upload our code to it
         connection.write("\x03\x10if(1){"+BANGLE_CODE+"}\n",
-          function() { console.log("Ready..."); });
+          function() { 
+            console.log("Ready..."); 
+            // Set magnetometer to 100 Hz ODR (assuming register 0x11 for CNTL2)
+            connection.write("Bangle.compassWr(0x11, 0xB0);\n", function() {});
+          });
       }, 1500);
     });
   });
