@@ -14,7 +14,7 @@
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
 // Set the poll interval for accelerometer
-Bangle.setPollInterval(80); // 80ms = 12,5Hz
+Bangle.setPollInterval(10); // 10ms = 100Hz
 Bangle.on('accel',function(a) {
   var d = [
     "A",
@@ -74,7 +74,11 @@ document.getElementById("btnConnect").addEventListener("click", function() {
       setTimeout(function() {
         // Now upload our code to it
         connection.write("\x03\x10if(1){"+BANGLE_CODE+"}\n",
-          function() { console.log("Ready..."); });
+          function() { 
+            console.log("Ready..."); 
+            // Set accelerometer to 100 Hz ODR
+            connection.write("Bangle.accelWr(0x1B, 3);\n", function() {});
+          });
       }, 1500);
     });
   });
