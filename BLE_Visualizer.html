@@ -25,9 +25,14 @@ var dataRateTimer;
 document.getElementById("btnConnect").addEventListener("click", connectBLE);
 
 async function connectBLE() {
+  if (!('bluetooth' in navigator)) {
+    alert('Web Bluetooth is not supported in this browser. Please use Chrome or Edge.');
+    return;
+  }
+  
   try {
     const device = await navigator.bluetooth.requestDevice({
-      filters: [{ namePrefix: 'Bangle.js' }],
+      acceptAllDevices: true,
       optionalServices: ['f8b23a4d-89ad-4220-8c9f-d81756009f0c']
     });
     const server = await device.gatt.connect();
@@ -48,8 +53,10 @@ async function connectBLE() {
     }, 1000);
     
     console.log("Connected via BLE");
+    alert("Connected successfully!");
   } catch (error) {
     console.error('BLE connection failed:', error);
+    alert('BLE connection failed: ' + error.message);
   }
 }
 
