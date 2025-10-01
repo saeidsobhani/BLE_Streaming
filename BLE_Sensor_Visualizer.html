@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLE Sensor Visualizer</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .sensor { margin: 20px 0; }
+        .bar { width: 100%; height: 20px; background-color: #f0f0f0; border: 1px solid #ccc; }
+        .fill { height: 100%; background-color: #4CAF50; transition: width 0.1s; }
+        .value { margin-top: 5px; font-weight: bold; }
+        button { padding: 10px 20px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Bangle.js BLE Sensor Visualizer</h1>
+    <button id="connectBtn">Connect to Bangle.js</button>
+    <div id="status">Disconnected</div>
+
+    <div class="sensor">
+        <h2>Accelerometer (g)</h2>
+        <div class="bar"><div id="accelXBar" class="fill" style="width: 0%;"></div></div>
+        <div class="value">X: <span id="accelX">0</span></div>
+        <div class="bar"><div id="accelYBar" class="fill" style="width: 0%;"></div></div>
+        <div class="value">Y: <span id="accelY">0</span></div>
+        <div class="bar"><div id="accelZBar" class="fill" style="width: 0%;"></div></div>
+        <div class="value">Z: <span id="accelZ">0</span></div>
+    </div>
+
+    <div class="sensor">
+        <h2>Magnetometer (µT)</h2>
+        <div class="bar"><div id="magXBar" class="fill" style="width: 0%;"></div></div>
+        <div class="value">X: <span id="magX">0</span></div>
+        <div class="bar"><div id="magYBar" class="fill" style="width: 0%;"></div></div>
+        <div class="value">Y: <span id="magY">0</span></div>
+        <div class="bar"><div id="magZBar" class="fill" style="width: 0%;"></div></div>
+        <div class="value">Z: <span id="magZ">0</span></div>
+    </div>
+
+    <script>
+        let device, server, service, magChar, accelChar;
+
+        const serviceUUID = 'f8b23a4d-89ad-4220-8c9f-d81756009f0c';
+        const magUUID = 'f8b23a4d-89ad-4220-8c9f-d81756009f0c';
+        const accelUUID = 'f8b23a4d-89ad-4220-8c9f-d81756009f0d';
+
+        document.getElementById('connectBtn').addEventListener('click', connect);
+
+        async function connect() {
+            try {
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ services: [serviceUUID] }]
+                });
+                server = await device.gatt.connect();
+                service = await server.getPrimaryService(serviceUUID);
+                magChar = await service.getCharacteristic(magUUID);
+                accelChar = await service.getCharacteristic(accelUUID);
+
+                await magChar.startNotifications();
+                await accelChar.startNotifications();
+
+                magChar.addEventListener('characteristicvaluechanged', handleMagData);
+                accelChar.addEventListener('characteristicvaluechanged', handleAccelData);
+
+                document.getElementById('status').textContent = 'Connected';
+                document.getElementById('connectBtn').disabled = true;
+            } catch (error) {
+                console.error('Connection failed:', error);
+                document.getElementById('status').textContent = 'Connection failed: ' + error.message;
+            }
+        }
+
+        function handleMagData(event) {
+            const data = new Int32Array(event.target.value.buffer);
+            updateBar('magX', data[0], -1000, 1000);
+            updateBar('magY', data[1], -1000, 1000);
+            updateBar('magZ', data[2], -1000, 1000);
+        }
+
+        function handleAccelData(event) {
+            const data = new Float32Array(event.target.value.buffer);
+            updateBar('accelX', data[0], -2, 2);
+            updateBar('accelY', data[1], -2, 2);
+            updateBar('accelZ', data[2], -2, 2);
+        }
+
+        function updateBar(axis, value, min, max) {
+            const element = document.getElementById(axis);
+            const bar = document.getElementById(axis + 'Bar');
+            element.textContent = value.toFixed(2);
+            const percentage = ((value - min) / (max - min)) * 100;
+            bar.style.width = Math.max(0, Math.min(100, percentage)) + '%';
+        }
+    </script>
+</body>
+</html>
