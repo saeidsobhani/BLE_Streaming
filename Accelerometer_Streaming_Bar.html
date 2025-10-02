@@ -13,17 +13,33 @@
 <script>
 // Code to upload to Bangle.js
 var BANGLE_CODE = `
-// Set the poll interval for accelerometer
-Bangle.setPollInterval(80); // 80ms = 12.5Hz (max for Bangle.js 1)
-Bangle.on('accel',function(a) {
-  var d = [
-    "A",
-    a.x,
-    a.y,
-    a.z
-    ];
-  Bluetooth.println(d.join(","));
-})`;
+// Set poll interval and configure accelerometer ODR to 100Hz
+Bangle.setPollInterval(10);
+
+// Configure accelerometer ODR to 100Hz via I2C
+var i2c = new I2C();
+i2c.setup({scl:14, sda:15});
+
+// Read CNTL1 register (0x18)
+var cntl1 = i2c.readFrom(0x1E, 0x18, 1)[0];
+
+// Clear PC1 bit (Bit 7) to standby
+cntl1 &= ~(1 << 7);
+i2c.writeTo(0x1E, [0x18, cntl1]);
+
+// Write 0x03 to ODCNTL (0x1B) for 100Hz
+i2c.writeTo(0x1E, [0x1B, 0x03]);
+
+// Set PC1 bit back to active
+cntl1 |= (1 << 7);
+i2c.writeTo(0x1E, [0x18, cntl1]);
+
+// Poll accelerometer at 10ms intervals
+setInterval(() => {
+  var a = Bangle.getAccel();
+  Bluetooth.println(["A", a.x, a.y, a.z].join(","));
+}, 10);
+`;
 
 // When we click the connect button...
 var connection;
