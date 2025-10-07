@@ -1,7 +1,7 @@
 # Adaptive Optimization of Bluetooth Data Transfer on Wearable Platforms  
-*Master's Thesis by Saeid Sobhani*  
+Master's Thesis by [Saeid Sobhani](http://www.linkedin.com/in/saeid-sobhani)  
 Supervised by: **[Prof. Dr. Kristof Van Laerhoven](https://ubi29.informatik.uni-siegen.de/usi/team_kvl.html)**  
-University of Siegen – Chair for Ubiquitous Computingaptive 
+University of Siegen – Chair for Ubiquitous Computing 
 
 ---
 
