@@ -1,0 +1,27 @@
+ble/
+
+# Python virtual environment
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Data files (optional - uncomment if you don't want to track data)
+# *.csv
+# *.h5
+# *.hdf5
