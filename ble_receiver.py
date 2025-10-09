@@ -1,12 +1,4 @@
-import asydef mag_notification_handler(sender, data):
-    # Data is Int32Array (3 values)
-    values = struct.unpack('<iii', data)
-    print(f"Magnetometer: X={values[0]}, Y={values[1]}, Z={values[2]}")
-
-def accel_notification_handler(sender, data):
-    # Data is Float32Array (3 values)
-    values = struct.unpack('<fff', data)
-    print(f"Accelerometer: X={values[0]:.2f}, Y={values[1]:.2f}, Z={values[2]:.2f}")ng for async operations
+import asyncio  # For asynchrony
 import bleak    #BLE library for Python
 from bleak import BleakClient, BleakScanner
 import struct  # For unpacking binary data
