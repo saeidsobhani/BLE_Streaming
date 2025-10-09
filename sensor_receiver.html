@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle.js Sensor Receiver</title>
+</head>
+<body>
+    <h1>Bangle.js Sensor Data</h1>
+    <button id="connect">Connect to Bangle.js Sensor</button>
+    <div id="output"></div>
+
+    <script>
+        const SERVICE_UUID = "f8b23a4d-89ad-4220-8c9f-d81756009f0c";
+        const MAGNETOMETER_CHAR_UUID = "f8b23a4d-89ad-4220-8c9f-d81756009f0e";
+        const ACCELEROMETER_CHAR_UUID = "f8b23a4d-89ad-4220-8c9f-d81756009f0d";
+
+        let output = document.getElementById('output');
+
+        document.getElementById('connect').addEventListener('click', async () => {
+            try {
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Bangle.js Sensor' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+
+                const server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+
+                // Magnetometer
+                const magChar = await service.getCharacteristic(MAGNETOMETER_CHAR_UUID);
+                await magChar.startNotifications();
+                magChar.addEventListener('characteristicvaluechanged', (event) => {
+                    const data = event.target.value;
+                    const values = new Int32Array(data.buffer);
+                    output.innerHTML += `<p>Magnetometer: X=${values[0]}, Y=${values[1]}, Z=${values[2]}</p>`;
+                    console.log('Magnetometer:', values);
+                });
+
+                // Accelerometer
+                const accelChar = await service.getCharacteristic(ACCELEROMETER_CHAR_UUID);
+                await accelChar.startNotifications();
+                accelChar.addEventListener('characteristicvaluechanged', (event) => {
+                    const data = event.target.value;
+                    const values = new Float32Array(data.buffer);
+                    output.innerHTML += `<p>Accelerometer: X=${values[0].toFixed(2)}, Y=${values[1].toFixed(2)}, Z=${values[2].toFixed(2)}</p>`;
+                    console.log('Accelerometer:', values);
+                });
+
+                output.innerHTML += '<p>Connected and subscribed to notifications.</p>';
+            } catch (error) {
+                output.innerHTML += `<p>Error: ${error.message}</p>`;
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
