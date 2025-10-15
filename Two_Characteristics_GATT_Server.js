@@ -7,16 +7,14 @@ var ACC_SCALE = 1000; // accelerometer: g -> mg (multiply by 1000)
 Bangle.setCompassPower(1);  // Enable magnetometer
 
 // Configure the sensor poll interval.
-Bangle.setPollInterval(80); // 80 ms for 12.5 Hz or 10 ms for 100 Hz
+Bangle.setPollInterval(10); // 80 ms for 12.5 Hz or 10 ms for 100 Hz
   
-/*  Configure magnetometer and accelerometer to 100 Hz
-Bangle.compassWr(0x31, 0x08); // Set mag to 100 Hz ODR (device/register-specific)
+//  Configure magnetometer and accelerometer to 100 Hz
+Bangle.compassWr(0x31, 0x08); // Set mag to 100 Hz ODR
 var i2c = new I2C();
 i2c.setup({scl:14, sda:15});
-i2c.writeTo(0x1E, [0x18, 0b00101100]);  // Enter standby mode
-i2c.writeTo(0x1E, [0x1B, 0x03]);        // Set ODCNTL to 100 Hz
-i2c.writeTo(0x1E, [0x18, 0b10101100]);  // Return to active mode
-*/
+i2c.writeTo(0x1E, [0x18, 0b00101100]);  // Enter standby mode - change cntl1 register - output range +-4g
+i2c.writeTo(0x1E, [0x18, 0b10101100]);  // Return to active mode - change cntl1 register
 
 // Track BLE connection status
 NRF.on('connect', function() {
@@ -49,15 +47,13 @@ NRF.setServices({
 
 // Advertise the custom service so centrals can discover and connect.
 NRF.setAdvertising({}, {
-  name: "Bangle.js Sensor", // Advertised device name
+  name: "Bangle.js Sensor",
   services: ['f26d62fe-3686-4241-ab06-0dad88068fac'] // Include custom service UUID
 });
 
 // Magnetometer event handler
 Bangle.on('mag', function(d) {
-  // Magnetometer units are typically microtesla (µT). If your driver returns other units,
-  // scale on the central side accordingly.
-  print("Mag (µT):", d.x, d.y, d.z); // Print d to Espruino console with units
+  print("Mag (decimal):", d.x, d.y, d.z); // Print magnetometer values to Espruino console - decimal- should multiply by 0.6 to get μT
 
   if (connected) {  // if central is connected
     // Push a notification to subscribed centrals by updating the characteristic value.
@@ -75,8 +71,7 @@ Bangle.on('mag', function(d) {
 
 // Accelerometer event handler.
 Bangle.on('accel', function(d) {
-  // Accelerometer values are in g (1 g ≈ 9.81 m/s²). Typical resting magnitude ≈ 1.0 g.
-  print("Accel (g):", d.x, d.y, d.z); // Print to Espruino console with units
+  print("Accel (g):", d.x, d.y, d.z); // Print accelerometer values to Espruino console - g (gravitational acceleration)
 
   if (connected) {
     NRF.updateServices({
@@ -88,7 +83,7 @@ Bangle.on('accel', function(d) {
             Math.round(d.y * ACC_SCALE),
             Math.round(d.z * ACC_SCALE)
           ]).buffer, // 3 × int16 -> 6 bytes payload
-          notify: true // Emit notification if central has enabled it
+          notify: true // Send as GATT Notification to subscribed centrals
         }
       }
     });

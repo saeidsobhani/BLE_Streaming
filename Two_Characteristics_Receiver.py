@@ -17,8 +17,10 @@ async def main():
     mag_count = 0
 
     def on_mag(sender, data):
-        x, y, z = struct.unpack('<hhh', data)
-        #print(f"Mag (µT): X={x}, Y={y}, Z={z}")
+        # Magnetometer sends raw Int16 LSB values; convert to µT using 0.6 µT/LSB
+        x_raw, y_raw, z_raw = struct.unpack('<hhh', data)
+        x_uT, y_uT, z_uT = x_raw * 0.6, y_raw * 0.6, z_raw * 0.6
+        #print(f"Mag (µT): X={x_uT:.1f}, Y={y_uT:.1f}, Z={z_uT:.1f}")
         nonlocal mag_count # Use nonlocal to modify outer scope variable
         mag_count += 1
 
