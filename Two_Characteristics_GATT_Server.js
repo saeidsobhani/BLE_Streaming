@@ -14,6 +14,7 @@ Bangle.compassWr(0x31, 0x08); // Set mag to 100 Hz ODR
 var i2c = new I2C();
 i2c.setup({scl:14, sda:15});
 i2c.writeTo(0x1E, [0x18, 0b00101100]);  // Enter standby mode - change cntl1 register - output range +-4g
+i2c.writeTo(0x1E, [0x1B, 0x03]);        // Set ODCNTL to 100 Hz
 i2c.writeTo(0x1E, [0x18, 0b10101100]);  // Return to active mode - change cntl1 register
 
 // Track BLE connection status
