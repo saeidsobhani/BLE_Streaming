@@ -24,7 +24,7 @@ NRF.on('disconnect', function() {
 // Define a custom GATT service with one combined characteristic (Accel + Mag)
 NRF.setServices({
   'f26d62fe-3686-4241-ab06-0dad88068fac': { // Custom service UUID
-    'f26d62fe-3686-4241-ab06-0dad88068fab': { // Combined characteristic UUID
+    'f26d62fe-3686-4241-ab06-0dad88068fae': { // Combined characteristic UUID
       description: 'Accel+Mag',
       notify: true,
       readable: true,
@@ -68,7 +68,7 @@ function sendBundledNotification() {
   // Send notification
   NRF.updateServices({
     'f26d62fe-3686-4241-ab06-0dad88068fac': {
-      'f26d62fe-3686-4241-ab06-0dad88068fab': {
+      'f26d62fe-3686-4241-ab06-0dad88068fae': {
         value: payload.buffer,
         notify: true
       }

@@ -4,7 +4,7 @@ import struct
 from bleak import BleakClient, BleakScanner
 
 SERVICE_UUID = "f26d62fe-3686-4241-ab06-0dad88068fac"
-COMBINED_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fab"
+COMBINED_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fae"
 
 ACC_SCALE = 1000        # mg on device -> divide by 1000 to get g
 MAG_LSB_TO_uT = 0.6     # raw LSB -> µT
