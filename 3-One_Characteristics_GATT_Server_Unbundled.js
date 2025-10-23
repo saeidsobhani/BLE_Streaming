@@ -51,10 +51,7 @@ function sendNotification() {
   payloadBuffer[3] = lastMag[0];
   payloadBuffer[4] = lastMag[1];
   payloadBuffer[5] = lastMag[2];
-  
-  // Log what's being sent over BLE
-  //print("BLE TX ->", payloadBuffer[0], payloadBuffer[1], payloadBuffer[2], "|", payloadBuffer[3], payloadBuffer[4], payloadBuffer[5]);
-  
+
   // Send notification immediately (no bundling)
   NRF.updateServices({
     'f26d62fe-3686-4241-ab06-0dad88068fac': {
