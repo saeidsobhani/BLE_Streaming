@@ -15,7 +15,6 @@ async def main():
     def on_combined(sender, data: bytearray):
         nonlocal notify_count
         
-        # Unpack: [ax, ay, az, mx, my, mz] as int16 LE
         ax_mg, ay_mg, az_mg, mx_raw, my_raw, mz_raw = struct.unpack("<hhhhhh", data)
         
         # Convert to physical units and see individual samples

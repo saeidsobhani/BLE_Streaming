@@ -1,16 +1,12 @@
 var connected = false; // Tracks whether a BLE central is currently connected
-
-// Fixed-point scaling for compact Int16 streaming
-var ACC_SCALE = 1000; // accelerometer: g -> mg (multiply by 1000)
-
-// Turn on the magnetometer sensor (compass)
+var ACC_SCALE = 1000; // accelerometer: g -> mg
 Bangle.setCompassPower(1);  // Enable magnetometer
 
 // Configure the sensor poll interval.
-Bangle.setPollInterval(10); // 80 ms for 12.5 Hz or 10 ms for 100 Hz
-  
-//  Configure magnetometer and accelerometer to 100 Hz
-Bangle.compassWr(0x31, 0x08); // Set mag to 100 Hz ODR
+Bangle.setPollInterval(10);
+
+//  Configure magnetometer and accelerometer ODR to 100 Hz
+Bangle.compassWr(0x31, 0x08);
 var i2c = new I2C();
 i2c.setup({scl:14, sda:15});
 i2c.writeTo(0x1E, [0x18, 0b00101100]);  // Enter standby mode - change cntl1 register - output range +-4g
@@ -26,9 +22,7 @@ NRF.on('disconnect', function() {
   connected = false;
 });
 
-// Define a custom GATT service with two characteristics (Mag, Accel).
-// 'readable: true' allows centrals to read the current value.
-// 'notify: true' allows centrals to subscribe and receive updates automatically.
+// Define a custom GATT service with two characteristics
 NRF.setServices({
   'f26d62fe-3686-4241-ab06-0dad88068fac': { // Custom service UUID
     'f26d62fe-3686-4241-ab06-0dad88068fae': { // Magnetometer characteristic UUID
@@ -46,17 +40,17 @@ NRF.setServices({
   }
 }, { uart: true });
 
-// Advertise the custom service so centrals can discover and connect.
+// Advertise the custom service
 NRF.setAdvertising({}, {
   name: "Bangle.js Sensor",
-  services: ['f26d62fe-3686-4241-ab06-0dad88068fac'] // Include custom service UUID
+  services: ['f26d62fe-3686-4241-ab06-0dad88068fac']
 });
 
 // Magnetometer event handler
 Bangle.on('mag', function(d) {
-  print("Mag (decimal):", d.x, d.y, d.z); // Print magnetometer values to Espruino console - decimal- should multiply by 0.6 to get μT
+  print("Mag (decimal):", d.x, d.y, d.z); // Unit: decimals that must multiplied by 0.6 to get microtesla (µT)
 
-  if (connected) {  // if central is connected
+  if (connected) {
     // Push a notification to subscribed centrals by updating the characteristic value.
     NRF.updateServices({
       'f26d62fe-3686-4241-ab06-0dad88068fac': { // service UUID
@@ -69,25 +63,23 @@ Bangle.on('mag', function(d) {
   }
 });
 
-
 // Accelerometer event handler.
 Bangle.on('accel', function(d) {
-  print("Accel (g):", d.x, d.y, d.z); // Print accelerometer values to Espruino console - g (gravitational acceleration)
+  print("Accel (g):", d.x, d.y, d.z); // Unit: g (gravitational acceleration)
 
   if (connected) {
     NRF.updateServices({
       'f26d62fe-3686-4241-ab06-0dad88068fac': { // service UUID
         'f26d62fe-3686-4241-ab06-0dad88068fad': { // Accelerometer characteristic UUID
-          // Convert g to mg and pack as Int16 for compact, precise fixed-point
+          // Convert g to mg and pack as Int16
           value: new Int16Array([
             Math.round(d.x * ACC_SCALE),
             Math.round(d.y * ACC_SCALE),
             Math.round(d.z * ACC_SCALE)
           ]).buffer, // 3 × int16 -> 6 bytes payload
-          notify: true // Send as GATT Notification to subscribed centrals
+          notify: true
         }
       }
     });
   }
 });
-

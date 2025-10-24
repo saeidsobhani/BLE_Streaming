@@ -1,32 +1,29 @@
 import asyncio  # For asynchrony
 import time     # For rate timing
-from bleak import BleakClient, BleakScanner  # BLE library for Python
+from bleak import BleakClient, BleakScanner
 import struct  # For unpacking binary data
 
-# UUIDs must match Two_Characteristics_BLE_GATT.js
 SERVICE_UUID = "f26d62fe-3686-4241-ab06-0dad88068fac"
 MAGNETOMETER_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fae"
 ACCELEROMETER_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fad"
 
-# Fixed-point scales must match the device code
-ACC_SCALE = 1000  # mg scale on device (int16). Convert back to g by /1000
+ACC_SCALE = 1000  # Convert back to g by /1000
 
 async def main():
-    # Counters for data rate (incremented by handlers)
+    # Counters for data rate
     accel_count = 0
     mag_count = 0
 
     def on_mag(sender, data):
-        # Magnetometer sends raw Int16 LSB values; convert to µT using 0.6 µT/LSB
         x_raw, y_raw, z_raw = struct.unpack('<hhh', data)
-        x_uT, y_uT, z_uT = x_raw * 0.6, y_raw * 0.6, z_raw * 0.6
+        #x_uT, y_uT, z_uT = x_raw * 0.6, y_raw * 0.6, z_raw * 0.6 # Convert to µT
         #print(f"Mag (µT): X={x_uT:.1f}, Y={y_uT:.1f}, Z={z_uT:.1f}")
         nonlocal mag_count # Use nonlocal to modify outer scope variable
         mag_count += 1
 
     def on_accel(sender, data):
         x_mg, y_mg, z_mg = struct.unpack('<hhh', data)
-        x_g, y_g, z_g = x_mg / ACC_SCALE, y_mg / ACC_SCALE, z_mg / ACC_SCALE
+        #x_g, y_g, z_g = x_mg / ACC_SCALE, y_mg / ACC_SCALE, z_mg / ACC_SCALE
         #print(f"Accel (g): X={x_g}, Y={y_g}, Z={z_g}")
         nonlocal accel_count
         accel_count += 1
@@ -61,7 +58,6 @@ async def main():
     print(f"Connecting to Bangle.js Sensor")
     async with BleakClient(target_device) as client:
         print("Connected!")
-        # Optional: list services/chars for debugging (guard for Bleak versions)
         services = getattr(client, "services", None)
         if services:
             for service in services:

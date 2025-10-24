@@ -37,14 +37,11 @@ NRF.setServices({
 var lastAccel = [0, 0, 0]; // mg (scaled)
 var lastMag   = [0, 0, 0]; // raw LSB
 
-// OPTIMIZATION STEP 1: Pre-allocate payload buffer to avoid repeated memory allocation
-// This buffer is reused for every transmission, reducing garbage collection overhead
 var payloadBuffer = new Int16Array(6); // Allocate once: [ax, ay, az, mx, my, mz]
 
 function sendNotification() {
   if (!connected) return;
   
-  // Reuse pre-allocated buffer instead of creating new array each time
   payloadBuffer[0] = lastAccel[0];
   payloadBuffer[1] = lastAccel[1];
   payloadBuffer[2] = lastAccel[2];
@@ -63,7 +60,7 @@ function sendNotification() {
   });
 }
 
-// Advertise the custom service so centrals can discover and connect.
+// Advertise the custom service so centrals
 NRF.setAdvertising({}, {
   name: "Bangle.js Sensor",
   services: ['f26d62fe-3686-4241-ab06-0dad88068fac'] // Include custom service UUID
@@ -71,7 +68,7 @@ NRF.setAdvertising({}, {
 
 // Magnetometer event handler
 Bangle.on('mag', function(d) {
-  print("Mag (decimal):", d.x, d.y, d.z); // Print magnetometer values to Espruino console - decimal- should multiply by 0.6 to get μT
+  print("Mag (decimal):", d.x, d.y, d.z); //Unit: decimal- should multiply by 0.6 to get μT
   lastMag[0] = d.x;
   lastMag[1] = d.y;
   lastMag[2] = d.z;
@@ -79,7 +76,7 @@ Bangle.on('mag', function(d) {
 
 // Accelerometer event handler (drives the sampling)
 Bangle.on('accel', function(d) {
-  print("Accel (g):", d.x, d.y, d.z); // Print accelerometer values to Espruino console - g (gravitational acceleration)
+  print("Accel (g):", d.x, d.y, d.z); // Unit: g (gravitational acceleration)
   lastAccel[0] = Math.round(d.x * ACC_SCALE);
   lastAccel[1] = Math.round(d.y * ACC_SCALE);
   lastAccel[2] = Math.round(d.z * ACC_SCALE);
