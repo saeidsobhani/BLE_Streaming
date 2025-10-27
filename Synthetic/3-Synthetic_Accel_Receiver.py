@@ -14,7 +14,7 @@ start_time = None
 def handle_notification(sender, data):
     global received_count, start_time
     # Unpack 3 int16 values (x, y, z)
-    x, y, z = struct.unpack("<hhh", data)
+    #x, y, z = struct.unpack("<hhh", data)
     received_count += 1
     if received_count == 1:
         start_time = time.time()
@@ -44,6 +44,6 @@ async def main():
         # Run indefinitely
         while True:
             await asyncio.sleep(1)
-
+            
 if __name__ == "__main__":
     asyncio.run(main())

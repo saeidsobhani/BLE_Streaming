@@ -5,7 +5,7 @@ var connected = false;
 NRF.setServices({
   'f26d62fe-3686-4241-ab06-0dad88068fac': {
     'f26d62fe-3686-4241-ab06-0dad88068fad': {
-      description: 'Synthetic Accelerometer',
+      description: 'Random Accelerometer',
       notify: true,
       readable: true,
       value: new Int16Array(3).buffer // 3 axes × 2 bytes
@@ -41,4 +41,4 @@ setInterval(function() {
       }
     }
   });
-}, 3); // 4 ms interval = 250 Hz
+}, 4); // 4 ms interval = 250 Hz

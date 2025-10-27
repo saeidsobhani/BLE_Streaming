@@ -1,14 +1,13 @@
 //NRF.setConnectionInterval(7.5, 7.5); // Fastest BLE interval
 var connected = false;
 
-// Custom GATT service: 1 characteristic, 48 bytes (8 samples × 3 axes × 2 bytes)
 NRF.setServices({
   'f26d62fe-3686-4241-ab06-0dad88068fac': {
     'f26d62fe-3686-4241-ab06-0dad88068fad': {
-      description: 'Synthetic Accelerometer Bundled',
+      description: 'Fastest 6 Byte',
       notify: true,
       readable: true,
-      value: new Int16Array(24).buffer // 8 samples × 3 axes
+      value: new Uint8Array(6).buffer // 6 bytes
     }
   }
 }, { uart: true });
@@ -21,26 +20,18 @@ NRF.setAdvertising({}, {
 NRF.on('connect', function() { connected = true; });
 NRF.on('disconnect', function() { connected = false; });
 
-
-function getSyntheticAccelBundle() {
-  var arr = new Int16Array(24); // 8 samples × 3 axes
-  for (var i = 0; i < 24; i++) {
-    arr[i] = (Math.random() * 65536 - 32768) | 0;
-  }
-  return arr;
-}
-
+// Predefined 6-byte buffer for fastest sending
+var fastBuffer = new Uint8Array([42, 99, 17, 88, 203, 7]);
 
 function sendBundles() {
   if (!connected) {
     setTimeout(sendBundles, 100);
     return;
   }
-  var sampleBuffer = getSyntheticAccelBundle();
   NRF.updateServices({
     'f26d62fe-3686-4241-ab06-0dad88068fac': {
       'f26d62fe-3686-4241-ab06-0dad88068fad': {
-        value: sampleBuffer.buffer,
+        value: fastBuffer.buffer,
         notify: true
       }
     }
