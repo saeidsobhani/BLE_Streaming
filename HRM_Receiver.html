@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle.js HRM Receiver Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin: 0;
+        }
+        #connectBtn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+        #connectBtn:hover {
+            background: #5568d3;
+        }
+        #connectBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-dot.connected {
+            background: #10b981;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .sensor-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bangle.js HRM Receiver Dashboard</h1>
+            <div>
+                <span class="status-dot" id="statusDot"></span>
+                <button id="connectBtn">Connect to Bangle.js</button>
+            </div>
+        </header>
+        <div class="sensor-grid">
+            <div class="sensor-card">
+                <div class="sensor-title">Raw Analog Value (analogRead(D29))</div>
+                <div class="chart-container">
+                    <canvas id="analogChart"></canvas>
+                </div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-title">HRM-raw Value</div>
+                <div class="chart-container">
+                    <canvas id="hrmRawChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // UUIDs must match your Bangle.js GATT server
+        const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
+        const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbd';
+        const MAX_DATA_POINTS = 200;
+
+        let device = null;
+        let server = null;
+        let hrmCharacteristic = null;
+        let analogChart = null;
+        let hrmRawChart = null;
+
+        function initCharts() {
+            analogChart = new Chart(
+                document.getElementById('analogChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Analog Value',
+                            data: [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102,126,234,0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: true, title: { display: true, text: 'Sample' } },
+                            y: { display: true, title: { display: true, text: 'Analog Value' } }
+                        }
+                    }
+                }
+            );
+            hrmRawChart = new Chart(
+                document.getElementById('hrmRawChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'HRM-raw',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16,185,129,0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: true, title: { display: true, text: 'Sample' } },
+                            y: { display: true, title: { display: true, text: 'HRM-raw Value' } }
+                        }
+                    }
+                }
+            );
+        }
+
+        function updateChart(chart, value) {
+            chart.data.datasets[0].data.push(value);
+            chart.data.labels.push(chart.data.labels.length);
+            if (chart.data.labels.length > MAX_DATA_POINTS) {
+                chart.data.datasets[0].data.shift();
+                chart.data.labels.shift();
+            }
+            chart.update('none');
+        }
+
+        async function connect() {
+            try {
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('statusDot').classList.remove('connected');
+                // Request device
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Bangle.js Sensor' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+                server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                hrmCharacteristic = await service.getCharacteristic(HRM_CHAR_UUID);
+                await hrmCharacteristic.startNotifications();
+                hrmCharacteristic.addEventListener('characteristicvaluechanged', handleHRMData);
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+            } catch (error) {
+                alert('Connection failed: ' + error);
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+            }
+        }
+
+        function onDisconnected() {
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+        }
+
+        function handleHRMData(event) {
+            const value = event.target.value;
+            // Expecting Float32Array([analog, hrmRaw])
+            const analog = value.getFloat32(0, true);
+            const hrmRaw = value.getFloat32(4, true);
+            updateChart(analogChart, analog);
+            updateChart(hrmRawChart, hrmRaw);
+        }
+
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            if (device && device.gatt.connected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            if (!navigator.bluetooth) {
+                alert('Web Bluetooth is not supported in this browser.');
+                document.getElementById('connectBtn').disabled = true;
+                return;
+            }
+            initCharts();
+        });
+    </script>
+</body>
+</html>
