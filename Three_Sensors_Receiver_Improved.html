@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle.js Three Sensor Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin: 0;
+        }
+        #connectBtn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+        #connectBtn:hover {
+            background: #5568d3;
+        }
+        #connectBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-dot.connected {
+            background: #10b981;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .sensor-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .rate-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .rate-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+        .rate-unit {
+            font-size: 14px;
+            color: #999;
+            margin-left: 4px;
+        }
+        .chart-container {
+            position: relative;
+            height: 350px;
+            margin-top: 10px;
+        }
+        .chart-container-small {
+            position: relative;
+            height: 250px;
+            margin-top: 10px;
+        }
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+        .legend-color {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Bangle.js Three Sensor Dashboard</h1>
+            <div>
+                <span class="status-dot" id="statusDot"></span>
+                <button id="connectBtn">Connect to Bangle.js</button>
+            </div>
+        </header>
+        <div class="sensor-card" style="margin-bottom:20px;">
+            <div class="sensor-title">Accelerometer</div>
+            <div class="rate-label">Data Rate: <span class="rate-value" id="accelRate">0.0</span> <span class="rate-unit">Hz</span></div>
+            <div class="chart-container">
+                <canvas id="accelChart"></canvas>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>X-axis</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Y-axis</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Z-axis</span>
+                </div>
+            </div>
+        </div>
+        <div class="sensor-grid">
+            <div class="sensor-card">
+                <div class="sensor-title">Magnetometer</div>
+                <div class="rate-label">Data Rate: <span class="rate-value" id="magRate">0.0</span> <span class="rate-unit">Hz</span></div>
+                <div class="chart-container-small">
+                    <canvas id="magChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ef4444;"></div>
+                        <span>X-axis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span>Y-axis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span>Z-axis</span>
+                    </div>
+                </div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-title">HRM Raw</div>
+                <div class="rate-label">Data Rate: <span class="rate-value" id="hrmRate">0.0</span> <span class="rate-unit">Hz</span></div>
+                <div class="chart-container-small">
+                    <canvas id="hrmChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // UUIDs must match your Bangle.js GATT server
+        const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
+        const ACCEL_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
+        const MAG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fae';
+        const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbf';
+        const MAX_DATA_POINTS = 100;
+
+        let device = null;
+        let server = null;
+        let accelCharacteristic = null;
+        let magCharacteristic = null;
+        let hrmCharacteristic = null;
+        let accelChart = null;
+        let magChart = null;
+        let hrmChart = null;
+        let accelCount = 0, magCount = 0, hrmCount = 0;
+        let lastRateUpdate = Date.now();
+        let sampleIndex = 0;
+
+        function initCharts() {
+            accelChart = new Chart(
+                document.getElementById('accelChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'X', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { label: 'Y', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { label: 'Z', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: true, title: { display: true, text: 'Sample' } }, y: { display: true, title: { display: true, text: 'Value' } } } }
+                }
+            );
+            magChart = new Chart(
+                document.getElementById('magChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'X', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { label: 'Y', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { label: 'Z', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: true, title: { display: true, text: 'Sample' } }, y: { display: true, title: { display: true, text: 'Value' } } } }
+                }
+            );
+            hrmChart = new Chart(
+                document.getElementById('hrmChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'HRM Raw', data: [], borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: true, title: { display: true, text: 'Sample' } }, y: { display: true, title: { display: true, text: 'Value' } } } }
+                }
+            );
+        }
+
+        function updateChart(chart, values) {
+            if (Array.isArray(values)) {
+                for (let i = 0; i < values.length; i++) {
+                    chart.data.datasets[i].data.push(values[i]);
+                }
+                chart.data.labels.push(sampleIndex++);
+                if (chart.data.labels.length > MAX_DATA_POINTS) {
+                    for (let i = 0; i < values.length; i++) {
+                        chart.data.datasets[i].data.shift();
+                    }
+                    chart.data.labels.shift();
+                }
+            } else {
+                chart.data.datasets[0].data.push(values);
+                chart.data.labels.push(sampleIndex++);
+                if (chart.data.labels.length > MAX_DATA_POINTS) {
+                    chart.data.datasets[0].data.shift();
+                    chart.data.labels.shift();
+                }
+            }
+            chart.update('none');
+        }
+
+        function updateRates() {
+            const now = Date.now();
+            const elapsed = (now - lastRateUpdate) / 1000;
+            if (elapsed >= 1.0) {
+                document.getElementById('accelRate').textContent = (accelCount / elapsed).toFixed(1);
+                document.getElementById('magRate').textContent = (magCount / elapsed).toFixed(1);
+                document.getElementById('hrmRate').textContent = (hrmCount / elapsed).toFixed(1);
+                accelCount = 0;
+                magCount = 0;
+                hrmCount = 0;
+                lastRateUpdate = now;
+            }
+        }
+
+        function handleAccelData(event) {
+            const value = event.target.value;
+            // 48 bytes, 16 samples, each sample is 3 × int8
+            for (let i = 0; i < 16; i++) {
+                let x = value.getInt8(i*3);
+                let y = value.getInt8(i*3+1);
+                let z = value.getInt8(i*3+2);
+                updateChart(accelChart, [x, y, z]);
+            }
+            accelCount += 16;
+            updateRates();
+        }
+
+        function handleMagData(event) {
+            const value = event.target.value;
+            // 6 bytes, 3 × int16
+            let x = value.getInt16(0, true);
+            let y = value.getInt16(2, true);
+            let z = value.getInt16(4, true);
+            updateChart(magChart, [x, y, z]);
+            magCount++;
+            updateRates();
+        }
+
+        function handleHRMData(event) {
+            const value = event.target.value;
+            // 1 byte, int8
+            let hrmRaw = value.getInt8(0);
+            updateChart(hrmChart, hrmRaw);
+            hrmCount++;
+            updateRates();
+        }
+
+        async function connect() {
+            try {
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('statusDot').classList.remove('connected');
+                device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'Bangle.js Sensor' }],
+                    optionalServices: [SERVICE_UUID]
+                });
+                server = await device.gatt.connect();
+                const service = await server.getPrimaryService(SERVICE_UUID);
+                accelCharacteristic = await service.getCharacteristic(ACCEL_CHAR_UUID);
+                magCharacteristic = await service.getCharacteristic(MAG_CHAR_UUID);
+                hrmCharacteristic = await service.getCharacteristic(HRM_CHAR_UUID);
+                await accelCharacteristic.startNotifications();
+                await magCharacteristic.startNotifications();
+                await hrmCharacteristic.startNotifications();
+                accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelData);
+                magCharacteristic.addEventListener('characteristicvaluechanged', handleMagData);
+                hrmCharacteristic.addEventListener('characteristicvaluechanged', handleHRMData);
+                document.getElementById('statusDot').classList.add('connected');
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+                device.addEventListener('gattserverdisconnected', onDisconnected);
+            } catch (error) {
+                alert('Connection failed: ' + error);
+                document.getElementById('connectBtn').disabled = false;
+            }
+        }
+
+        function disconnect() {
+            if (device && device.gatt.connected) {
+                device.gatt.disconnect();
+            }
+        }
+
+        function onDisconnected() {
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+        }
+
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            if (device && device.gatt.connected) {
+                disconnect();
+            } else {
+                connect();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            if (!navigator.bluetooth) {
+                alert('Web Bluetooth is not supported in this browser.');
+                document.getElementById('connectBtn').disabled = true;
+                return;
+            }
+            initCharts();
+        });
+    </script>
+</body>
+</html>
