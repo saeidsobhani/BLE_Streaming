@@ -89,7 +89,6 @@
         // UUIDs must match your Bangle.js GATT server
         const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
         const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
-        const ACC_SCALE = 1000; // mg to g conversion
         const MAX_DATA_POINTS = 100; // Show last 100 points on chart
         const SAMPLES_PER_NOTIFICATION = 16; // 48 bytes / (3 axes * 1 byte per axis) = 16 samples
         // State
@@ -99,6 +98,7 @@
         let accelSampleCount = 0;
         let lastRateUpdate = Date.now();
         let accelChart = null;
+        let rateUpdateInterval = null;
         // Initialize chart
         function initChart() {
             accelChart = new Chart(
@@ -158,13 +158,12 @@
                 updateChart(x_g, y_g, z_g);
                 accelSampleCount++;
             }
-            updateRateDisplay();
         }
         // Update data rate display
         function updateRateDisplay() {
             const now = Date.now();
             const elapsed = (now - lastRateUpdate) / 1000;
-            if (elapsed >= 1.0) {
+            if (elapsed > 0) {
                 const accelRate = accelSampleCount / elapsed;
                 document.getElementById('accelRate').textContent = accelRate.toFixed(1);
                 accelSampleCount = 0;
@@ -183,6 +182,10 @@
                 accelCharacteristic = await service.getCharacteristic(ACCELEROMETER_CHAR_UUID);
                 await accelCharacteristic.startNotifications();
                 accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelData);
+                
+                // Start rate update timer (update display every second)
+                rateUpdateInterval = setInterval(updateRateDisplay, 1000);
+                
                 document.getElementById('statusText').textContent = 'Connected';
                 document.getElementById('statusDot').classList.add('connected');
                 document.getElementById('connectBtn').textContent = 'Disconnect';
@@ -204,6 +207,19 @@
         }
         // Handle disconnection
         function onDisconnected() {
+            // Clean up event listener
+            if (accelCharacteristic) {
+                accelCharacteristic.removeEventListener('characteristicvaluechanged', handleAccelData);
+                accelCharacteristic = null;
+            }
+            
+            // Stop rate update timer
+            if (rateUpdateInterval) {
+                clearInterval(rateUpdateInterval);
+                rateUpdateInterval = null;
+            }
+            
+            // Reset state and UI
             document.getElementById('statusText').textContent = 'Disconnected';
             document.getElementById('statusDot').classList.remove('connected');
             document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';

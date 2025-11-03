@@ -16,7 +16,7 @@ i2c.writeTo(0x1E, [0x18, 0b10101100]); // Return to active mode
 NRF.on('connect', function() { connected = true; });
 NRF.on('disconnect', function() { connected = false; });
 
-// Define custom GATT service with two characteristics
+// Define custom GATT service with three characteristics
 NRF.setServices({
   'f26d62fe-3686-4241-ab06-0dad88068fac': {
     'f26d62fe-3686-4241-ab06-0dad88068fae': {
@@ -80,7 +80,7 @@ Bangle.on('mag', function(d) {
   }
 });
 
-// Accelerometer polling at 200 Hz (every 5 ms) using FIFO (8-bit resolution)
+// Accelerometer polling every 65 ms using Stream buffer (8-bit resolution)
 setInterval(function() {
   var buf = Bangle.accelRd(0x3F, 48); // Read 48 bytes from BUF_READ (FIFO)
   if (buf && buf.length === 48 && connected) {
