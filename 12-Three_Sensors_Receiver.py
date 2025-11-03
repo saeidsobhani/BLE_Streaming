@@ -8,6 +8,8 @@ ACCEL_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fad"
 MAG_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fae"
 HRM_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fbf"
 hrm_count = 0
+accel_count = 0
+mag_count = 0
 
 def handle_hrm(sender, data):
     global hrm_count
@@ -15,10 +17,6 @@ def handle_hrm(sender, data):
     hrm_raw, = struct.unpack('<b', data)
     hrm_count += 1
     #print(f"HRM raw: {hrm_raw}")
-
-accel_count = 0
-mag_count = 0
-
 
 def handle_accel(sender, data):
     global accel_count
@@ -31,7 +29,7 @@ def handle_accel(sender, data):
     #     x_g = x * 0.03125
     #     y_g = y * 0.03125
     #     z_g = z * 0.03125
-    #     print(f"Accelerometer: x={x_g:.4f}g, y={y_g:.4f}g, z={z_g:.4f}g")
+    #     print(f"Accelerometer: x={x_g:.3f}g, y={y_g:.3f}g, z={z_g:.3f}g")
 
 
 def handle_mag(sender, data):

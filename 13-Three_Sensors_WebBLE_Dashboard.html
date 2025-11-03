@@ -205,7 +205,8 @@
         let hrmChart = null;
         let accelCount = 0, magCount = 0, hrmCount = 0;
         let lastRateUpdate = Date.now();
-        let sampleIndex = 0;
+        let accelIndex = 0, magIndex = 0, hrmIndex = 0;
+        let rateUpdateInterval = null;
 
         function initCharts() {
             accelChart = new Chart(
@@ -253,12 +254,12 @@
             );
         }
 
-        function updateChart(chart, values) {
+        function updateChart(chart, values, indexVar) {
             if (Array.isArray(values)) {
                 for (let i = 0; i < values.length; i++) {
                     chart.data.datasets[i].data.push(values[i]);
                 }
-                chart.data.labels.push(sampleIndex++);
+                chart.data.labels.push(indexVar);
                 if (chart.data.labels.length > MAX_DATA_POINTS) {
                     for (let i = 0; i < values.length; i++) {
                         chart.data.datasets[i].data.shift();
@@ -267,7 +268,7 @@
                 }
             } else {
                 chart.data.datasets[0].data.push(values);
-                chart.data.labels.push(sampleIndex++);
+                chart.data.labels.push(indexVar);
                 if (chart.data.labels.length > MAX_DATA_POINTS) {
                     chart.data.datasets[0].data.shift();
                     chart.data.labels.shift();
@@ -297,10 +298,9 @@
                 let x = value.getInt8(i*3);
                 let y = value.getInt8(i*3+1);
                 let z = value.getInt8(i*3+2);
-                updateChart(accelChart, [x, y, z]);
+                updateChart(accelChart, [x, y, z], accelIndex++);
             }
             accelCount += 16;
-            updateRates();
         }
 
         function handleMagData(event) {
@@ -309,18 +309,16 @@
             let x = value.getInt16(0, true);
             let y = value.getInt16(2, true);
             let z = value.getInt16(4, true);
-            updateChart(magChart, [x, y, z]);
+            updateChart(magChart, [x, y, z], magIndex++);
             magCount++;
-            updateRates();
         }
 
         function handleHRMData(event) {
             const value = event.target.value;
             // 1 byte, int8
             let hrmRaw = value.getInt8(0);
-            updateChart(hrmChart, hrmRaw);
+            updateChart(hrmChart, hrmRaw, hrmIndex++);
             hrmCount++;
-            updateRates();
         }
 
         async function connect() {
@@ -342,6 +340,10 @@
                 accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelData);
                 magCharacteristic.addEventListener('characteristicvaluechanged', handleMagData);
                 hrmCharacteristic.addEventListener('characteristicvaluechanged', handleHRMData);
+                
+                // Start rate update timer
+                rateUpdateInterval = setInterval(updateRates, 1000);
+                
                 document.getElementById('statusDot').classList.add('connected');
                 document.getElementById('connectBtn').disabled = false;
                 document.getElementById('connectBtn').textContent = 'Disconnect';
@@ -359,6 +361,31 @@
         }
 
         function onDisconnected() {
+            // Clean up event listeners
+            if (accelCharacteristic) {
+                accelCharacteristic.removeEventListener('characteristicvaluechanged', handleAccelData);
+            }
+            if (magCharacteristic) {
+                magCharacteristic.removeEventListener('characteristicvaluechanged', handleMagData);
+            }
+            if (hrmCharacteristic) {
+                hrmCharacteristic.removeEventListener('characteristicvaluechanged', handleHRMData);
+            }
+            
+            // Stop rate update timer
+            if (rateUpdateInterval) {
+                clearInterval(rateUpdateInterval);
+                rateUpdateInterval = null;
+            }
+            
+            // Reset counters and display
+            accelCount = 0;
+            magCount = 0;
+            hrmCount = 0;
+            document.getElementById('accelRate').textContent = '0.0';
+            document.getElementById('magRate').textContent = '0.0';
+            document.getElementById('hrmRate').textContent = '0.0';
+            
             document.getElementById('statusDot').classList.remove('connected');
             document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
         }

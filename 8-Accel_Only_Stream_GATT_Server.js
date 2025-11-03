@@ -1,11 +1,10 @@
 var connected = false; // Tracks BLE connection status
 
-// Configure accelerometer ODR to 1600 Hz and enable FIFO 8-bit mode
 var i2c = new I2C();
 i2c.setup({scl:14, sda:15});
 i2c.writeTo(0x1E, [0x18, 0b00101100]); // Enter standby mode - output range +-4g
-i2c.writeTo(0x1E, [0x1B, 0x07]);       // Set ODCNTL to 1600 Hz
-i2c.writeTo(0x1E, [0x3B, 0b10000001]); // Set BUF_CNTL2 to 8-bit MSB samples in buffer
+i2c.writeTo(0x1E, [0x1B, 0x07]);       // Set ODCNTL to have 1600 Hz ODR
+i2c.writeTo(0x1E, [0x3B, 0b10000001]); // BUF_CNTL2: BUFE=1(active) / BUF_RES=0(8-bit MSB) / BFIE=0(Buffer interupt disable) / Stream Mode
 i2c.writeTo(0x1E, [0x18, 0b10101100]); // Return to active mode
 
 // Track BLE connection status
@@ -30,17 +29,20 @@ NRF.setAdvertising({}, {
   services: ['f26d62fe-3686-4241-ab06-0dad88068fac']
 });
 
-// Accelerometer polling using FIFO (8-bit resolution)
+// Poll STATUS_REG to check for interrupt
 setInterval(function() {
-  var buf = Bangle.accelRd(0x3F, 48); // Read 48 bytes from BUF_READ (FIFO)
-  if (buf && buf.length === 48 && connected) {
-    NRF.updateServices({
-      'f26d62fe-3686-4241-ab06-0dad88068fac': {
-        'f26d62fe-3686-4241-ab06-0dad88068fad': {
-          value: buf.buffer, // Send 48 bytes in one notification
-          notify: true
+
+    var buf = Bangle.accelRd(0x3F, 48); // Read 48 bytes from Stream buffer
+    
+    if (buf && buf.length === 48 && connected) {
+      NRF.updateServices({
+        'f26d62fe-3686-4241-ab06-0dad88068fac': {
+          'f26d62fe-3686-4241-ab06-0dad88068fad': {
+            value: buf.buffer, // Send 48 bytes in one notification
+            notify: true
+          }
         }
-      }
-    });
-  }
-}, 10); // 16*0.625ms interval
+      });
+    }
+  // }
+}, 16); // every 16ms

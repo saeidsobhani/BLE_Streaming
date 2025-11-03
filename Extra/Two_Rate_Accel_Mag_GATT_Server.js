@@ -7,7 +7,7 @@ Bangle.setPollInterval(10); // Configure sensor poll interval to 100 Hz
 var i2c = new I2C();
 i2c.setup({scl:14, sda:15});
 i2c.writeTo(0x1E, [0x18, 0b00101100]); // Enter standby mode - output range +-4g
-i2c.writeTo(0x1E, [0x1B, 0x04]);       // Set ODCNTL to 200 Hz
+i2c.writeTo(0x1E, [0x1B, 0x05]);       // Set ODCNTL to 400 Hz
 i2c.writeTo(0x1E, [0x3B, 0b10000001]); // Set BUF_CNTL2 to 8-bit MSB samples in buffer
 i2c.writeTo(0x1E, [0x18, 0b10101100]); // Return to active mode
 
