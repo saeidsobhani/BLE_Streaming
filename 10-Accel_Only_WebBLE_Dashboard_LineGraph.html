@@ -21,6 +21,9 @@
         #connectBtn { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s; font-weight: 600; }
         #connectBtn:hover { background: #5568d3; }
         #connectBtn:disabled { background: #ccc; cursor: not-allowed; }
+        #screenshotBtn { background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s; font-weight: 600; }
+        #screenshotBtn:hover { background: #059669; }
+        #screenshotBtn:disabled { background: #ccc; cursor: not-allowed; }
         .status-indicator { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #666; }
         .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ccc; animation: pulse 2s infinite; }
         .status-dot.connected { background: #10b981; }
@@ -51,6 +54,7 @@
                     <div class="status-dot" id="statusDot"></div>
                     <span id="statusText">Disconnected</span>
                 </div>
+                <button id="screenshotBtn">📸 Screenshot</button>
                 <button id="connectBtn">Connect to Bangle.js</button>
             </div>
         </header>
@@ -109,7 +113,8 @@
         
         // Batch buffer for chart updates (reduces overhead)
         let batchBuffer = { x: [], y: [], z: [], timestamps: [] };
-        let sampleNumber = 0; // Track sample number for X-axis
+        let sampleNumber = 0; // Track sample number for X-axis (absolute counter)
+        let displaySampleNumber = 0; // Track relative sample number for display (0-2000)
         // Initialize chart
         function initChart() {
             accelChart = new Chart(
@@ -134,8 +139,18 @@
                                 display: true, 
                                 title: { display: true, text: 'Time (samples)' }, 
                                 ticks: { 
-                                    maxTicksLimit: 10
-                                }
+                                    maxTicksLimit: 11, // Show 0, 200, 400, ..., 2000 (11 ticks total)
+                                    callback: function(value, index, values) {
+                                        // Always show labels at 0, 200, 400, 600, ..., 2000
+                                        const sampleNum = Math.round(value);
+                                        if (sampleNum % 200 === 0) {
+                                            return sampleNum;
+                                        }
+                                        return null; // Hide other labels
+                                    }
+                                },
+                                min: 0,
+                                max: 2000
                             },
                             y: { 
                                 display: true, 
@@ -169,6 +184,15 @@
                 accelChart.data.labels.shift();
             }
             
+            // Update X-axis to always show 0-2000 range
+            // Map the actual labels to relative positions (0-2000)
+            if (accelChart.data.labels.length > 0) {
+                const firstLabel = accelChart.data.labels[0];
+                accelChart.data.labels = accelChart.data.labels.map((label, idx) => {
+                    return (label - firstLabel) % 2000;
+                });
+            }
+            
             // Single chart update for all samples (much faster)
             accelChart.update('none');
             
@@ -196,7 +220,10 @@
                 batchBuffer.x.push(x_g);
                 batchBuffer.y.push(y_g);
                 batchBuffer.z.push(z_g);
-                batchBuffer.timestamps.push(sampleNumber++);
+                batchBuffer.timestamps.push(displaySampleNumber);
+                
+                sampleNumber++;
+                displaySampleNumber = sampleNumber % 2000; // Keep in 0-2000 range
                 
                 accelSampleCount++;
             }
@@ -232,6 +259,7 @@
                 startTime = performance.now();
                 sampleCounter = 0;
                 sampleNumber = 0; // Reset sample counter
+                displaySampleNumber = 0;
                 batchBuffer = { x: [], y: [], z: [], timestamps: [] };
                 
                 // Start rate update timer (update display every second)
@@ -278,9 +306,26 @@
             accelSampleCount = 0;
             sampleCounter = 0;
             sampleNumber = 0;
+            displaySampleNumber = 0;
             startTime = null;
             batchBuffer = { x: [], y: [], z: [], timestamps: [] };
             document.getElementById('accelRate').textContent = '0.0';
+        }
+        
+        // Screenshot function - capture chart as image
+        function takeScreenshot() {
+            // Get the canvas element
+            const canvas = document.getElementById('accelChart');
+            
+            // Convert canvas to image URL
+            const imageURL = canvas.toDataURL('image/png');
+            
+            // Create a temporary link element to download
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.download = `accelerometer_${timestamp}.png`;
+            link.href = imageURL;
+            link.click();
         }
         // Button click handler
         document.getElementById('connectBtn').addEventListener('click', () => {
@@ -290,6 +335,9 @@
                 connect();
             }
         });
+        
+        // Screenshot button handler
+        document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
         // Initialize on load
         window.addEventListener('load', () => {
             if (!navigator.bluetooth) {
