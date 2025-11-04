@@ -13,7 +13,7 @@
             min-height: 100vh;
             padding: 20px;
         }
-        .container { max-width: 900px; margin: 0 auto; }
+        .container { max-width: 1260px; margin: 0 auto; } /* Increased by 40%: 900 * 1.4 = 1260px */
         header { background: white; border-radius: 10px; padding: 20px 30px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
         h1 { color: #333; font-size: 24px; margin: 0; }
         .subtitle { color: #666; font-size: 14px; margin-top: 5px; }
@@ -32,7 +32,7 @@
         .rate-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
         .rate-value { font-size: 24px; font-weight: 700; color: #667eea; font-family: 'Courier New', monospace; }
         .rate-unit { font-size: 14px; color: #999; margin-left: 4px; }
-        .chart-container { position: relative; height: 300px; margin-top: 10px; }
+        .chart-container { position: relative; height: 360px; margin-top: 10px; } /* Increased by 20%: 300 * 1.2 = 360px */
         .legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #f0f0f0; }
         .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666; }
         .legend-color { width: 16px; height: 3px; border-radius: 2px; }
@@ -89,10 +89,12 @@
         // UUIDs must match your Bangle.js GATT server
         const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
         const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
-        const MAX_DATA_POINTS = 500; // Show last 500 points on chart (more data = smoother visualization)
+        
+        // Optimized settings for real-time visualization at ~1000 Hz
+        const MAX_DATA_POINTS = 300; // 300 points at ~1000Hz = 0.3 seconds of data (shorter window = more responsive)
         const SAMPLES_PER_NOTIFICATION = 16; // 48 bytes / (3 axes * 1 byte per axis) = 16 samples
-        const DOWNSAMPLE_FACTOR = 2; // Plot every Nth sample to reduce chart updates (2 = plot every other sample)
-        const TIME_WINDOW_SECONDS = 1.0; // Target: show 1 second of data
+        const DOWNSAMPLE_FACTOR = 1; // NO downsampling - plot every sample for smoothest visualization
+        const BATCH_UPDATE_SIZE = 16; // Update chart after receiving full packet (all 16 samples)
         
         // State
         let device = null;
@@ -102,8 +104,11 @@
         let lastRateUpdate = Date.now();
         let accelChart = null;
         let rateUpdateInterval = null;
-        let sampleCounter = 0; // For downsampling
-        let startTime = null; // Track connection start time for time-based X-axis
+        let sampleCounter = 0;
+        let startTime = null;
+        
+        // Batch buffer for chart updates (reduces overhead)
+        let batchBuffer = { x: [], y: [], z: [], timestamps: [] };
         // Initialize chart
         function initChart() {
             accelChart = new Chart(
@@ -147,40 +152,44 @@
                 }
             );
         }
-        // Update chart data with time-based X-axis
-        function updateChart(x, y, z, timestamp) {
-            const maxPoints = MAX_DATA_POINTS;
-            accelChart.data.datasets[0].data.push(x);
-            accelChart.data.datasets[1].data.push(y);
-            accelChart.data.datasets[2].data.push(z);
-            accelChart.data.labels.push(timestamp);
+        // Update chart data with time-based X-axis (batch update for performance)
+        function updateChartBatch() {
+            if (batchBuffer.x.length === 0) return;
             
-            if (accelChart.data.labels.length > maxPoints) {
+            const maxPoints = MAX_DATA_POINTS;
+            
+            // Add all batched samples at once
+            accelChart.data.datasets[0].data.push(...batchBuffer.x);
+            accelChart.data.datasets[1].data.push(...batchBuffer.y);
+            accelChart.data.datasets[2].data.push(...batchBuffer.z);
+            accelChart.data.labels.push(...batchBuffer.timestamps);
+            
+            // Trim excess points
+            while (accelChart.data.labels.length > maxPoints) {
                 accelChart.data.datasets[0].data.shift();
                 accelChart.data.datasets[1].data.shift();
                 accelChart.data.datasets[2].data.shift();
                 accelChart.data.labels.shift();
             }
+            
+            // Single chart update for all samples (much faster)
             accelChart.update('none');
+            
+            // Clear batch buffer
+            batchBuffer = { x: [], y: [], z: [], timestamps: [] };
         }
         // Handle accelerometer data (48 bytes, 16 samples, 3 axes, 1 byte per axis)
+        // Optimized for real-time: batch process all 16 samples, then update chart once
         function handleAccelData(event) {
             const value = event.target.value;
             const dataView = new DataView(value.buffer);
             
-            // Calculate time for each sample (assuming ~1000 Hz sampling rate)
-            const currentTime = (Date.now() - startTime) / 1000; // Time in seconds since connection
+            // Use high-precision timestamp for real-time accuracy
+            const currentTime = performance.now() / 1000; // Seconds since page load
+            const timeOffset = (currentTime - (startTime / 1000)); // Relative to connection start
             
-            // Each sample: X, Y, Z (8-bit signed)
+            // Process all 16 samples in the packet
             for (let i = 0; i < SAMPLES_PER_NOTIFICATION; i++) {
-                accelSampleCount++;
-                sampleCounter++;
-                
-                // Downsample: only plot every Nth sample to reduce chart update frequency
-                if (sampleCounter % DOWNSAMPLE_FACTOR !== 0) {
-                    continue;
-                }
-                
                 const x_raw = dataView.getInt8(i * 3);
                 const y_raw = dataView.getInt8(i * 3 + 1);
                 const z_raw = dataView.getInt8(i * 3 + 2);
@@ -190,11 +199,21 @@
                 const y_g = y_raw * 0.03125;
                 const z_g = z_raw * 0.03125;
                 
-                // Estimate timestamp for this sample based on sample rate
-                const sampleTime = currentTime + (i / 1000.0); // Assume 1000 Hz
+                // Calculate precise timestamp for this sample
+                // Assume samples arrive at ~1000 Hz, so each sample is 1ms apart
+                const sampleTime = timeOffset + (i * 0.001); // i milliseconds offset
                 
-                updateChart(x_g, y_g, z_g, sampleTime);
+                // Add to batch buffer
+                batchBuffer.x.push(x_g);
+                batchBuffer.y.push(y_g);
+                batchBuffer.z.push(z_g);
+                batchBuffer.timestamps.push(sampleTime);
+                
+                accelSampleCount++;
             }
+            
+            // Update chart once per packet (16 samples at once) - much more efficient
+            updateChartBatch();
         }
         // Update data rate display
         function updateRateDisplay() {
@@ -220,9 +239,10 @@
                 await accelCharacteristic.startNotifications();
                 accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelData);
                 
-                // Initialize start time for time-based X-axis
-                startTime = Date.now();
+                // Initialize start time for time-based X-axis (use performance.now for precision)
+                startTime = performance.now();
                 sampleCounter = 0;
+                batchBuffer = { x: [], y: [], z: [], timestamps: [] };
                 
                 // Start rate update timer (update display every second)
                 rateUpdateInterval = setInterval(updateRateDisplay, 1000);
@@ -268,6 +288,7 @@
             accelSampleCount = 0;
             sampleCounter = 0;
             startTime = null;
+            batchBuffer = { x: [], y: [], z: [], timestamps: [] };
             document.getElementById('accelRate').textContent = '0.0';
         }
         // Button click handler
