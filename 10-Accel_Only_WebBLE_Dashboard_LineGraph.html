@@ -131,12 +131,12 @@
                         scales: {
                             x: { 
                                 display: true, 
-                                title: { display: true, text: 'Time (milliseconds)' }, 
+                                title: { display: true, text: 'Time (ms)' }, 
                                 ticks: { 
                                     maxTicksLimit: 10,
                                     callback: function(value, index, values) {
-                                        // Format as seconds with 2 decimal places
-                                        return value.toFixed(2) + 'ms';
+                                        // Format as milliseconds (whole numbers)
+                                        return Math.round(value * 1000) + 'ms';
                                     }
                                 }
                             },
