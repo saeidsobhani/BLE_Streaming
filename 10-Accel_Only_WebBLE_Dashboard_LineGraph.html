@@ -91,7 +91,7 @@
         const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
         
         // Optimized settings for real-time visualization at ~1000 Hz
-        const MAX_DATA_POINTS = 1000; // 1000 points at ~1000Hz = 1 second of data (shorter window = more responsive)
+        const MAX_DATA_POINTS = 2000; // 2000 points at ~1000Hz = 2 seconds of data (shorter window = more responsive)
         const SAMPLES_PER_NOTIFICATION = 16; // 48 bytes / (3 axes * 1 byte per axis) = 16 samples
         const DOWNSAMPLE_FACTOR = 2; // Downsample by a factor of 2
         const BATCH_UPDATE_SIZE = 16; // Update chart after receiving full packet (all 16 samples)
@@ -109,6 +109,7 @@
         
         // Batch buffer for chart updates (reduces overhead)
         let batchBuffer = { x: [], y: [], z: [], timestamps: [] };
+        let sampleNumber = 0; // Track sample number for X-axis
         // Initialize chart
         function initChart() {
             accelChart = new Chart(
@@ -131,13 +132,9 @@
                         scales: {
                             x: { 
                                 display: true, 
-                                title: { display: true, text: 'Time (ms)' }, 
+                                title: { display: true, text: 'Time (samples)' }, 
                                 ticks: { 
-                                    maxTicksLimit: 10,
-                                    callback: function(value, index, values) {
-                                        // Format as milliseconds (whole numbers)
-                                        return Math.round(value * 1000) + 'ms';
-                                    }
+                                    maxTicksLimit: 10
                                 }
                             },
                             y: { 
@@ -184,10 +181,6 @@
             const value = event.target.value;
             const dataView = new DataView(value.buffer);
             
-            // Use high-precision timestamp for real-time accuracy
-            const currentTime = performance.now() / 1000; // Seconds since page load
-            const timeOffset = (currentTime - (startTime / 1000)); // Relative to connection start
-            
             // Process all 16 samples in the packet
             for (let i = 0; i < SAMPLES_PER_NOTIFICATION; i++) {
                 const x_raw = dataView.getInt8(i * 3);
@@ -199,15 +192,11 @@
                 const y_g = y_raw * 0.03125;
                 const z_g = z_raw * 0.03125;
                 
-                // Calculate precise timestamp for this sample
-                // Assume samples arrive at ~1000 Hz, so each sample is 1ms apart
-                const sampleTime = timeOffset + (i * 0.001); // i milliseconds offset
-                
-                // Add to batch buffer
+                // Add to batch buffer with sample number
                 batchBuffer.x.push(x_g);
                 batchBuffer.y.push(y_g);
                 batchBuffer.z.push(z_g);
-                batchBuffer.timestamps.push(sampleTime);
+                batchBuffer.timestamps.push(sampleNumber++);
                 
                 accelSampleCount++;
             }
@@ -242,6 +231,7 @@
                 // Initialize start time for time-based X-axis (use performance.now for precision)
                 startTime = performance.now();
                 sampleCounter = 0;
+                sampleNumber = 0; // Reset sample counter
                 batchBuffer = { x: [], y: [], z: [], timestamps: [] };
                 
                 // Start rate update timer (update display every second)
@@ -287,6 +277,7 @@
             document.getElementById('connectBtn').disabled = false;
             accelSampleCount = 0;
             sampleCounter = 0;
+            sampleNumber = 0;
             startTime = null;
             batchBuffer = { x: [], y: [], z: [], timestamps: [] };
             document.getElementById('accelRate').textContent = '0.0';
