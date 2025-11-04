@@ -316,14 +316,12 @@
         function takeScreenshot() {
             // Get the canvas element
             const canvas = document.getElementById('accelChart');
-            
-            // Convert canvas to image URL
-            const imageURL = canvas.toDataURL('image/png');
-            
+            // Convert canvas to JPEG image URL (quality 0.92)
+            const imageURL = canvas.toDataURL('image/jpeg', 0.92);
             // Create a temporary link element to download
             const link = document.createElement('a');
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-            link.download = `accelerometer_${timestamp}.png`;
+            link.download = `accelerometer_${timestamp}.jpg`;
             link.href = imageURL;
             link.click();
         }
