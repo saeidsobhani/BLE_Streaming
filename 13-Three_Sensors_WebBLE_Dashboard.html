@@ -199,8 +199,7 @@
         const ACCEL_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
         const MAG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fae';
         const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbf';
-        const MAX_ACCEL_POINTS = 400; // 2 seconds at 200 Hz
-        const SAMPLES_PER_NOTIFICATION = 16;
+        const MAX_DATA_POINTS = 200;
 
         let device = null;
         let server = null;
@@ -212,9 +211,8 @@
         let hrmChart = null;
         let accelCount = 0, magCount = 0, hrmCount = 0;
         let lastRateUpdate = Date.now();
+        let accelIndex = 0, magIndex = 0, hrmIndex = 0;
         let rateUpdateInterval = null;
-        let accelSampleNumber = 0;
-        let accelBatchBuffer = { x: [], y: [], z: [], labels: [] };
 
         function initCharts() {
             accelChart = new Chart(
@@ -239,12 +237,12 @@
                                 display: true,
                                 title: { display: true, text: 'Samples' },
                                 min: 0,
-                                max: MAX_ACCEL_POINTS,
+                                max: 200,
                                 ticks: {
-                                    stepSize: 40,
+                                    stepSize: 20,
                                     callback: function(value, index, values) {
-                                        // Show ticks at 0, 40, ..., 400
-                                        if (value % 40 === 0) {
+                                        // Only show ticks at 0, 20, ..., 200
+                                        if (value % 20 === 0) {
                                             return value;
                                         }
                                         return '';
@@ -300,42 +298,27 @@
             );
         }
 
-        function updateAccelChartBatch() {
-            if (accelBatchBuffer.x.length === 0) return;
-            accelChart.data.datasets[0].data.push(...accelBatchBuffer.x);
-            accelChart.data.datasets[1].data.push(...accelBatchBuffer.y);
-            accelChart.data.datasets[2].data.push(...accelBatchBuffer.z);
-            accelChart.data.labels.push(...accelBatchBuffer.labels);
-            // Trim excess points
-            while (accelChart.data.labels.length > MAX_ACCEL_POINTS) {
-                accelChart.data.datasets[0].data.shift();
-                accelChart.data.datasets[1].data.shift();
-                accelChart.data.datasets[2].data.shift();
-                accelChart.data.labels.shift();
+        function updateChart(chart, values, indexVar) {
+            if (Array.isArray(values)) {
+                for (let i = 0; i < values.length; i++) {
+                    chart.data.datasets[i].data.push(values[i]);
+                }
+                chart.data.labels.push(indexVar);
+                if (chart.data.labels.length > MAX_DATA_POINTS) {
+                    for (let i = 0; i < values.length; i++) {
+                        chart.data.datasets[i].data.shift();
+                    }
+                    chart.data.labels.shift();
+                }
+            } else {
+                chart.data.datasets[0].data.push(values);
+                chart.data.labels.push(indexVar);
+                if (chart.data.labels.length > MAX_DATA_POINTS) {
+                    chart.data.datasets[0].data.shift();
+                    chart.data.labels.shift();
+                }
             }
-            // Remap labels to 0-MAX_ACCEL_POINTS
-            if (accelChart.data.labels.length > 0) {
-                const firstLabel = accelChart.data.labels[0];
-                accelChart.data.labels = accelChart.data.labels.map((label) => (label - firstLabel) % MAX_ACCEL_POINTS);
-            }
-            accelChart.update('none');
-            accelBatchBuffer = { x: [], y: [], z: [], labels: [] };
-        }
-
-        function handleAccelData(event) {
-            const value = event.target.value;
-            for (let i = 0; i < SAMPLES_PER_NOTIFICATION; i++) {
-                let x = value.getInt8(i*3) * 0.03125;
-                let y = value.getInt8(i*3+1) * 0.03125;
-                let z = value.getInt8(i*3+2) * 0.03125;
-                accelBatchBuffer.x.push(x);
-                accelBatchBuffer.y.push(y);
-                accelBatchBuffer.z.push(z);
-                accelBatchBuffer.labels.push(accelSampleNumber);
-                accelSampleNumber++;
-            }
-            accelCount += SAMPLES_PER_NOTIFICATION;
-            updateAccelChartBatch();
+            chart.update('none');
         }
 
         function updateRates() {
@@ -350,6 +333,19 @@
                 hrmCount = 0;
                 lastRateUpdate = now;
             }
+        }
+
+        function handleAccelData(event) {
+            const value = event.target.value;
+            // 48 bytes, 16 samples, each sample is 3 × int8
+            for (let i = 0; i < 16; i++) {
+                // Convert raw int8 to g (±128 = ±4g, scale = 4/128 = 0.03125)
+                let x = value.getInt8(i*3) * 0.03125;
+                let y = value.getInt8(i*3+1) * 0.03125;
+                let z = value.getInt8(i*3+2) * 0.03125;
+                updateChart(accelChart, [x, y, z], accelIndex++);
+            }
+            accelCount += 16;
         }
 
         function handleMagData(event) {
