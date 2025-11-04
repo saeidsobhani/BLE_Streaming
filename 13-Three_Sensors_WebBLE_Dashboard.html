@@ -213,6 +213,7 @@
         let lastRateUpdate = Date.now();
         let accelIndex = 0, magIndex = 0, hrmIndex = 0;
         let rateUpdateInterval = null;
+        let accelBatchBuffer = { x: [], y: [], z: [], labels: [] };
 
         function initCharts() {
             accelChart = new Chart(
@@ -277,7 +278,21 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Sample' } },
+                            x: {
+                                display: true,
+                                title: { display: true, text: 'Samples' },
+                                min: 0,
+                                max: 200,
+                                ticks: {
+                                    stepSize: 20,
+                                    callback: function(value, index, values) {
+                                        if (value % 20 === 0) {
+                                            return value;
+                                        }
+                                        return '';
+                                    }
+                                }
+                            },
                             y: { display: true, title: { display: true, text: 'Magnetic Field (µT)' } }
                         }
                     }
@@ -293,17 +308,43 @@
                             { label: 'HRM Raw', data: [], borderColor: '#667eea', backgroundColor: 'rgba(102,126,234,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
                         ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: true, title: { display: true, text: 'Sample' } }, y: { display: true, title: { display: true, text: 'Value' } } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: { display: true, text: 'Samples' },
+                                min: 0,
+                                max: 200,
+                                ticks: {
+                                    stepSize: 20,
+                                    callback: function(value, index, values) {
+                                        if (value % 20 === 0) {
+                                            return value;
+                                        }
+                                        return '';
+                                    }
+                                }
+                            },
+                            y: { display: true, title: { display: true, text: 'HRM Raw Value' } }
+                        }
+                    }
                 }
             );
         }
 
         function updateChart(chart, values, indexVar) {
+            // Use modulo to keep labels in 0-200 range for consistent x-axis
+            const displayIndex = indexVar % 200;
+            
             if (Array.isArray(values)) {
                 for (let i = 0; i < values.length; i++) {
                     chart.data.datasets[i].data.push(values[i]);
                 }
-                chart.data.labels.push(indexVar);
+                chart.data.labels.push(displayIndex);
                 if (chart.data.labels.length > MAX_DATA_POINTS) {
                     for (let i = 0; i < values.length; i++) {
                         chart.data.datasets[i].data.shift();
@@ -312,7 +353,7 @@
                 }
             } else {
                 chart.data.datasets[0].data.push(values);
-                chart.data.labels.push(indexVar);
+                chart.data.labels.push(displayIndex);
                 if (chart.data.labels.length > MAX_DATA_POINTS) {
                     chart.data.datasets[0].data.shift();
                     chart.data.labels.shift();
@@ -343,8 +384,34 @@
                 let x = value.getInt8(i*3) * 0.03125;
                 let y = value.getInt8(i*3+1) * 0.03125;
                 let z = value.getInt8(i*3+2) * 0.03125;
-                updateChart(accelChart, [x, y, z], accelIndex++);
+                
+                // Add to batch buffer
+                accelBatchBuffer.x.push(x);
+                accelBatchBuffer.y.push(y);
+                accelBatchBuffer.z.push(z);
+                accelBatchBuffer.labels.push(accelIndex % 200);
+                accelIndex++;
             }
+            
+            // Update chart with all 16 samples at once
+            if (accelBatchBuffer.x.length > 0) {
+                accelChart.data.datasets[0].data.push(...accelBatchBuffer.x);
+                accelChart.data.datasets[1].data.push(...accelBatchBuffer.y);
+                accelChart.data.datasets[2].data.push(...accelBatchBuffer.z);
+                accelChart.data.labels.push(...accelBatchBuffer.labels);
+                
+                // Trim to MAX_DATA_POINTS
+                while (accelChart.data.labels.length > MAX_DATA_POINTS) {
+                    accelChart.data.datasets[0].data.shift();
+                    accelChart.data.datasets[1].data.shift();
+                    accelChart.data.datasets[2].data.shift();
+                    accelChart.data.labels.shift();
+                }
+                
+                accelChart.update('none');
+                accelBatchBuffer = { x: [], y: [], z: [], labels: [] };
+            }
+            
             accelCount += 16;
         }
 

@@ -93,4 +93,4 @@ setInterval(function() {
       }
     });
   }
-}, 65); // Every 65 ms
+}, 80); // Every 80 ms
