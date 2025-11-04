@@ -91,7 +91,7 @@
         const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
         
         // Optimized settings for real-time visualization at ~1000 Hz
-        const MAX_DATA_POINTS = 500; // 500 points at ~1000Hz = 0.5 seconds of data (shorter window = more responsive)
+        const MAX_DATA_POINTS = 1000; // 1000 points at ~1000Hz = 1 second of data (shorter window = more responsive)
         const SAMPLES_PER_NOTIFICATION = 16; // 48 bytes / (3 axes * 1 byte per axis) = 16 samples
         const DOWNSAMPLE_FACTOR = 2; // Downsample by a factor of 2
         const BATCH_UPDATE_SIZE = 16; // Update chart after receiving full packet (all 16 samples)
@@ -131,12 +131,12 @@
                         scales: {
                             x: { 
                                 display: true, 
-                                title: { display: true, text: 'Time (seconds)' }, 
+                                title: { display: true, text: 'Time (milliseconds)' }, 
                                 ticks: { 
                                     maxTicksLimit: 10,
                                     callback: function(value, index, values) {
                                         // Format as seconds with 2 decimal places
-                                        return value.toFixed(2) + 's';
+                                        return value.toFixed(2) + 'ms';
                                     }
                                 }
                             },
