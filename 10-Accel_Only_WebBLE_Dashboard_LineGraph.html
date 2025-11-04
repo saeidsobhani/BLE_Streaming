@@ -89,8 +89,11 @@
         // UUIDs must match your Bangle.js GATT server
         const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
         const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
-        const MAX_DATA_POINTS = 100; // Show last 100 points on chart
+        const MAX_DATA_POINTS = 500; // Show last 500 points on chart (more data = smoother visualization)
         const SAMPLES_PER_NOTIFICATION = 16; // 48 bytes / (3 axes * 1 byte per axis) = 16 samples
+        const DOWNSAMPLE_FACTOR = 2; // Plot every Nth sample to reduce chart updates (2 = plot every other sample)
+        const TIME_WINDOW_SECONDS = 1.0; // Target: show 1 second of data
+        
         // State
         let device = null;
         let server = null;
@@ -99,6 +102,8 @@
         let lastRateUpdate = Date.now();
         let accelChart = null;
         let rateUpdateInterval = null;
+        let sampleCounter = 0; // For downsampling
+        let startTime = null; // Track connection start time for time-based X-axis
         // Initialize chart
         function initChart() {
             accelChart = new Chart(
@@ -119,21 +124,37 @@
                         animation: false,
                         plugins: { legend: { display: false }, title: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Time (samples)' }, ticks: { maxTicksLimit: 10 } },
-                            y: { display: true, title: { display: true, text: 'Acceleration (g)' } }
+                            x: { 
+                                display: true, 
+                                title: { display: true, text: 'Time (seconds)' }, 
+                                ticks: { 
+                                    maxTicksLimit: 10,
+                                    callback: function(value, index, values) {
+                                        // Format as seconds with 2 decimal places
+                                        return value.toFixed(2) + 's';
+                                    }
+                                }
+                            },
+                            y: { 
+                                display: true, 
+                                title: { display: true, text: 'Acceleration (g)' },
+                                suggestedMin: -4,
+                                suggestedMax: 4
+                            }
                         },
                         interaction: { intersect: false, mode: 'index' }
                     }
                 }
             );
         }
-        // Update chart data
-        function updateChart(x, y, z) {
+        // Update chart data with time-based X-axis
+        function updateChart(x, y, z, timestamp) {
             const maxPoints = MAX_DATA_POINTS;
             accelChart.data.datasets[0].data.push(x);
             accelChart.data.datasets[1].data.push(y);
             accelChart.data.datasets[2].data.push(z);
-            accelChart.data.labels.push(accelChart.data.labels.length);
+            accelChart.data.labels.push(timestamp);
+            
             if (accelChart.data.labels.length > maxPoints) {
                 accelChart.data.datasets[0].data.shift();
                 accelChart.data.datasets[1].data.shift();
@@ -146,17 +167,33 @@
         function handleAccelData(event) {
             const value = event.target.value;
             const dataView = new DataView(value.buffer);
+            
+            // Calculate time for each sample (assuming ~1000 Hz sampling rate)
+            const currentTime = (Date.now() - startTime) / 1000; // Time in seconds since connection
+            
             // Each sample: X, Y, Z (8-bit signed)
             for (let i = 0; i < SAMPLES_PER_NOTIFICATION; i++) {
+                accelSampleCount++;
+                sampleCounter++;
+                
+                // Downsample: only plot every Nth sample to reduce chart update frequency
+                if (sampleCounter % DOWNSAMPLE_FACTOR !== 0) {
+                    continue;
+                }
+                
                 const x_raw = dataView.getInt8(i * 3);
                 const y_raw = dataView.getInt8(i * 3 + 1);
                 const z_raw = dataView.getInt8(i * 3 + 2);
+                
                 // Convert to g (assuming +-128 = +-4g, so scale = 4/128 = 0.03125g/LSB)
                 const x_g = x_raw * 0.03125;
                 const y_g = y_raw * 0.03125;
                 const z_g = z_raw * 0.03125;
-                updateChart(x_g, y_g, z_g);
-                accelSampleCount++;
+                
+                // Estimate timestamp for this sample based on sample rate
+                const sampleTime = currentTime + (i / 1000.0); // Assume 1000 Hz
+                
+                updateChart(x_g, y_g, z_g, sampleTime);
             }
         }
         // Update data rate display
@@ -182,6 +219,10 @@
                 accelCharacteristic = await service.getCharacteristic(ACCELEROMETER_CHAR_UUID);
                 await accelCharacteristic.startNotifications();
                 accelCharacteristic.addEventListener('characteristicvaluechanged', handleAccelData);
+                
+                // Initialize start time for time-based X-axis
+                startTime = Date.now();
+                sampleCounter = 0;
                 
                 // Start rate update timer (update display every second)
                 rateUpdateInterval = setInterval(updateRateDisplay, 1000);
@@ -225,6 +266,8 @@
             document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
             document.getElementById('connectBtn').disabled = false;
             accelSampleCount = 0;
+            sampleCounter = 0;
+            startTime = null;
             document.getElementById('accelRate').textContent = '0.0';
         }
         // Button click handler
