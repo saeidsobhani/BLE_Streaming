@@ -96,7 +96,7 @@
         }
         .chart-container {
             position: relative;
-            height: 350px;
+            height: 315px;
             margin-top: 10px;
         }
         .chart-container-small {
@@ -136,8 +136,10 @@
             </div>
         </header>
         <div class="sensor-card" style="margin-bottom:20px;">
-            <div class="sensor-title">Accelerometer</div>
-            <div class="rate-label">Data Rate: <span class="rate-value" id="accelRate">0.0</span> <span class="rate-unit">Hz</span></div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="sensor-title">Accelerometer</div>
+                <div class="rate-label">Data Rate: <span class="rate-value" id="accelRate">0.0</span> <span class="rate-unit">Hz</span></div>
+            </div>
             <div class="chart-container">
                 <canvas id="accelChart"></canvas>
             </div>
@@ -158,8 +160,10 @@
         </div>
         <div class="sensor-grid">
             <div class="sensor-card">
-                <div class="sensor-title">Magnetometer</div>
-                <div class="rate-label">Data Rate: <span class="rate-value" id="magRate">0.0</span> <span class="rate-unit">Hz</span></div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="sensor-title">Magnetometer</div>
+                    <div class="rate-label">Data Rate: <span class="rate-value" id="magRate">0.0</span> <span class="rate-unit">Hz</span></div>
+                </div>
                 <div class="chart-container-small">
                     <canvas id="magChart"></canvas>
                 </div>
@@ -179,8 +183,10 @@
                 </div>
             </div>
             <div class="sensor-card">
-                <div class="sensor-title">HRM Raw</div>
-                <div class="rate-label">Data Rate: <span class="rate-value" id="hrmRate">0.0</span> <span class="rate-unit">Hz</span></div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div class="sensor-title">HRM Raw</div>
+                    <div class="rate-label">Data Rate: <span class="rate-value" id="hrmRate">0.0</span> <span class="rate-unit">Hz</span></div>
+                </div>
                 <div class="chart-container-small">
                     <canvas id="hrmChart"></canvas>
                 </div>
@@ -193,7 +199,7 @@
         const ACCEL_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
         const MAG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fae';
         const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbf';
-        const MAX_DATA_POINTS = 100;
+        const MAX_DATA_POINTS = 200;
 
         let device = null;
         let server = null;
@@ -221,7 +227,36 @@
                             { label: 'Z', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
                         ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: true, title: { display: true, text: 'Sample' } }, y: { display: true, title: { display: true, text: 'Value' } } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                display: true,
+                                title: { display: true, text: 'Samples' },
+                                min: 0,
+                                max: 200,
+                                ticks: {
+                                    stepSize: 20,
+                                    callback: function(value, index, values) {
+                                        // Only show ticks at 0, 20, ..., 200
+                                        if (value % 20 === 0) {
+                                            return value;
+                                        }
+                                        return '';
+                                    }
+                                }
+                            },
+                            y: {
+                                display: true,
+                                title: { display: true, text: 'Acceleration (g)' },
+                                min: -4,
+                                max: 4
+                            }
+                        }
+                    }
                 }
             );
             magChart = new Chart(
@@ -236,7 +271,16 @@
                             { label: 'Z', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
                         ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: true, title: { display: true, text: 'Sample' } }, y: { display: true, title: { display: true, text: 'Value' } } } }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { display: true, title: { display: true, text: 'Sample' } },
+                            y: { display: true, title: { display: true, text: 'Magnetic Field (µT)' } }
+                        }
+                    }
                 }
             );
             hrmChart = new Chart(
@@ -295,9 +339,10 @@
             const value = event.target.value;
             // 48 bytes, 16 samples, each sample is 3 × int8
             for (let i = 0; i < 16; i++) {
-                let x = value.getInt8(i*3);
-                let y = value.getInt8(i*3+1);
-                let z = value.getInt8(i*3+2);
+                // Convert raw int8 to g (±128 = ±4g, scale = 4/128 = 0.03125)
+                let x = value.getInt8(i*3) * 0.03125;
+                let y = value.getInt8(i*3+1) * 0.03125;
+                let z = value.getInt8(i*3+2) * 0.03125;
                 updateChart(accelChart, [x, y, z], accelIndex++);
             }
             accelCount += 16;
@@ -306,9 +351,9 @@
         function handleMagData(event) {
             const value = event.target.value;
             // 6 bytes, 3 × int16
-            let x = value.getInt16(0, true);
-            let y = value.getInt16(2, true);
-            let z = value.getInt16(4, true);
+            let x = value.getInt16(0, true) * 0.6;
+            let y = value.getInt16(2, true) * 0.6;
+            let z = value.getInt16(4, true) * 0.6;
             updateChart(magChart, [x, y, z], magIndex++);
             magCount++;
         }

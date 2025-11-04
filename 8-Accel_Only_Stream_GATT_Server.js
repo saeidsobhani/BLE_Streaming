@@ -29,8 +29,8 @@ NRF.setAdvertising({}, {
   services: ['f26d62fe-3686-4241-ab06-0dad88068fac']
 });
 
-// Poll and read FIFO buffer every 16ms
 setInterval(function() {
+
     var buf = Bangle.accelRd(0x3F, 48); // Read 48 bytes from Stream buffer
     
     if (buf && buf.length === 48 && connected) {
