@@ -1,4 +1,3 @@
-//NRF.setConnectionInterval(7.5, 7.5);
 var connected = false;
 
 // Custom GATT service: 1 characteristic, 6 bytes (x, y, z)

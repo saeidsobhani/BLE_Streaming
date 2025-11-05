@@ -15,12 +15,12 @@ def handle_accel(sender, data):
     samples = struct.unpack('<' + 'bbb'*16, data)
     accel_count += 16
     # Print all 16 samples from this notification
-    for i in range(16):
-        x, y, z = samples[i*3 : i*3+3]
-        # x_g = x * 0.03125
-        # y_g = y * 0.03125
-        # z_g = z * 0.03125
-        print(f"Accelerometer: x={x}, y={y}, z={z}")
+    # for i in range(16):
+    #     x, y, z = samples[i*3 : i*3+3]
+    #     x_g = x * 0.03125
+    #     y_g = y * 0.03125
+    #     z_g = z * 0.03125
+    #     print(f"Accelerometer: x={x}, y={y}, z={z}")
 
 async def main():
     print("Scanning for Bangle.js Accel Sensor...")
@@ -47,7 +47,7 @@ async def main():
                 now = time.monotonic()
                 dt = max(now - last, 1e-6)
                 acc_hz = (accel_count - last_acc) / dt
-                # print(f"Rates: Accel ~ {acc_hz:.1f} Hz")
+                print(f"Rates: Accel ~ {acc_hz:.1f} Hz")
                 last = now
                 last_acc = accel_count
 

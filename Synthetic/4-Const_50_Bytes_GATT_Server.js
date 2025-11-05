@@ -1,5 +1,3 @@
-
-//NRF.setConnectionInterval(7.5, 7.5); // Fastest BLE interval
 var connected = false;
 
 NRF.setServices({
@@ -29,6 +27,12 @@ var fastBuffer = new Uint8Array([
   39, 178, 92, 13, 240, 61, 128, 185, 72, 109,
   251, 29, 116, 167, 48, 137, 221, 84, 195, 10
 ]);
+
+
+// var fastBuffer = new Uint8Array([
+//   12, 34, 56, 78, 90, 21, 43, 65, 87, 9,
+//   10, 32, 54, 76, 98, 11, 22, 33, 44, 55
+// ]);
 
 function sendBundles() {
   if (!connected) {

@@ -1,4 +1,3 @@
-//NRF.setConnectionInterval(7.5, 7.5); // Fastest BLE interval
 var connected = false;
 
 NRF.setServices({
