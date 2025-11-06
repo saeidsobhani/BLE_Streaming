@@ -76,6 +76,17 @@
             font-weight: 600;
             color: #333;
             margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .data-rate {
+            font-size: 14px;
+            font-weight: normal;
+            color: #666;
+            background: #f0f0f0;
+            padding: 4px 10px;
+            border-radius: 4px;
         }
         .chart-container {
             position: relative;
@@ -95,13 +106,19 @@
         </header>
         <div class="sensor-grid">
             <div class="sensor-card">
-                <div class="sensor-title">Raw Analog Value (analogRead(D29))</div>
+                <div class="sensor-title">
+                    <span>Raw Analog Value (analogRead(D29))</span>
+                    <span class="data-rate" id="analogRate">0 Hz</span>
+                </div>
                 <div class="chart-container">
                     <canvas id="analogChart"></canvas>
                 </div>
             </div>
             <div class="sensor-card">
-                <div class="sensor-title">HRM-raw Value</div>
+                <div class="sensor-title">
+                    <span>HRM-raw Value</span>
+                    <span class="data-rate" id="hrmRate">0 Hz</span>
+                </div>
                 <div class="chart-container">
                     <canvas id="hrmRawChart"></canvas>
                 </div>
@@ -121,6 +138,12 @@
     let hrmCharacteristic = null;
     let analogChart = null;
     let hrmRawChart = null;
+    
+    // Data rate tracking
+    let analogSampleCount = 0;
+    let hrmSampleCount = 0;
+    let analogRateTimer = null;
+    let hrmRateTimer = null;
 
         function initCharts() {
             function getTickValues() {
@@ -243,6 +266,7 @@
                 document.getElementById('connectBtn').disabled = false;
                 document.getElementById('connectBtn').textContent = 'Disconnect';
                 device.addEventListener('gattserverdisconnected', onDisconnected);
+                startDataRateMonitoring();
             } catch (error) {
                 alert('Connection failed: ' + error);
                 document.getElementById('connectBtn').disabled = false;
@@ -258,6 +282,7 @@
         function onDisconnected() {
             document.getElementById('statusDot').classList.remove('connected');
             document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+            stopDataRateMonitoring();
         }
 
 
@@ -267,6 +292,7 @@
             // Int16, range -32768 to 32767, little-endian
             const analogRaw = value.getInt16(0, true);
             updateChart(analogChart, analogRaw);
+            analogSampleCount++;
         }
 
         // Handler for HRM-raw characteristic (Int8)
@@ -275,6 +301,38 @@
             // Int8, range -128 to 127
             const hrmRaw = value.getInt8(0);
             updateChart(hrmRawChart, hrmRaw);
+            hrmSampleCount++;
+        }
+        
+        // Start data rate monitoring
+        function startDataRateMonitoring() {
+            // Update analog rate every second
+            analogRateTimer = setInterval(() => {
+                document.getElementById('analogRate').textContent = analogSampleCount + ' Hz';
+                analogSampleCount = 0;
+            }, 1000);
+            
+            // Update HRM rate every second
+            hrmRateTimer = setInterval(() => {
+                document.getElementById('hrmRate').textContent = hrmSampleCount + ' Hz';
+                hrmSampleCount = 0;
+            }, 1000);
+        }
+        
+        // Stop data rate monitoring
+        function stopDataRateMonitoring() {
+            if (analogRateTimer) {
+                clearInterval(analogRateTimer);
+                analogRateTimer = null;
+            }
+            if (hrmRateTimer) {
+                clearInterval(hrmRateTimer);
+                hrmRateTimer = null;
+            }
+            document.getElementById('analogRate').textContent = '0 Hz';
+            document.getElementById('hrmRate').textContent = '0 Hz';
+            analogSampleCount = 0;
+            hrmSampleCount = 0;
         }
 
         document.getElementById('connectBtn').addEventListener('click', () => {
