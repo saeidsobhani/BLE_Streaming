@@ -149,12 +149,22 @@
             const xAxisConfig = {
                 display: true,
                 title: { display: true, text: 'Sample' },
+                grid: {
+                    display: true,
+                    drawTicks: false,
+                    color: function(context) {
+                        // Draw grid lines only at 10 equal divisions
+                        const max = MAX_DATA_POINTS;
+                        const step = Math.round(max / 10);
+                        if (context.tick && context.tick.value % step === 0 && context.tick.value !== 0) {
+                            return '#bbb'; // grid line color
+                        }
+                        return 'rgba(0,0,0,0)'; // transparent for all others
+                    }
+                },
                 ticks: {
                     display: false  // Hide x-axis tick labels
                 }
-            };
-
-            analogChart = new Chart(
                 document.getElementById('analogChart'),
                 {
                     type: 'line',
