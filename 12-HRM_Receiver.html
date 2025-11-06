@@ -261,11 +261,11 @@
         }
 
 
-        // Handler for analog characteristic (Int8)
+        // Handler for analog characteristic (Int16)
         function handleAnalogData(event) {
             const value = event.target.value;
-            // Int8, range -128 to 127, plot raw value directly
-            const analogRaw = value.getInt8(0);
+            // Int16, range -32768 to 32767, little-endian
+            const analogRaw = value.getInt16(0, true);
             updateChart(analogChart, analogRaw);
         }
 
