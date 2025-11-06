@@ -62,8 +62,13 @@
         }
         .sensor-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            grid-template-columns: repeat(2, 1fr);
             gap: 20px;
+        }
+        @media (max-width: 1200px) {
+            .sensor-grid {
+                grid-template-columns: 1fr;
+            }
         }
         .sensor-card {
             background: white;
@@ -81,12 +86,13 @@
             align-items: center;
         }
         .data-rate-badge {
-            font-size: 12px;
+            font-size: 14px;
             background: #667eea;
             color: white;
-            padding: 4px 8px;
+            padding: 4px 12px;
             border-radius: 4px;
             font-weight: 500;
+            font-family: 'Courier New', monospace;
         }
         .chart-container {
             position: relative;
@@ -108,7 +114,7 @@
             <div class="sensor-card">
                 <div class="sensor-title">
                     <span>Raw Analog Value (analogRead(D29))</span>
-                    <span class="data-rate-badge">200 Hz</span>
+                    <span class="data-rate-badge" id="analogRate">0 Hz</span>
                 </div>
                 <div class="chart-container">
                     <canvas id="analogChart"></canvas>
@@ -117,7 +123,7 @@
             <div class="sensor-card">
                 <div class="sensor-title">
                     <span>HRM-raw Value</span>
-                    <span class="data-rate-badge">50 Hz</span>
+                    <span class="data-rate-badge" id="hrmRate">0 Hz</span>
                 </div>
                 <div class="chart-container">
                     <canvas id="hrmRawChart"></canvas>
@@ -130,7 +136,8 @@
         const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
         const ANALOG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbd'; // 200 Hz analog data
         const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbe'; // 50 Hz HRM data
-        const MAX_DATA_POINTS = 400; // Increased to show more history at higher sample rate
+        const MAX_ANALOG_POINTS = 200; // Show 200 points for analog data
+        const MAX_HRM_POINTS = 50; // Show 50 points for HRM data
 
         let device = null;
         let server = null;
@@ -138,7 +145,14 @@
         let hrmCharacteristic = null;
         let analogChart = null;
         let hrmRawChart = null;
-        let globalSampleCounter = 0; // Global counter for synchronized x-axis
+        
+        // Data rate calculation variables
+        let analogDataCount = 0;
+        let hrmDataCount = 0;
+        let analogLastTime = Date.now();
+        let hrmLastTime = Date.now();
+        let analogRateInterval = null;
+        let hrmRateInterval = null;
 
         function initCharts() {
             analogChart = new Chart(
@@ -163,12 +177,12 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Time (samples)' } },
+                            x: { display: true, title: { display: true, text: 'Sample Index' } },
                             y: { 
                                 display: true, 
-                                title: { display: true, text: 'Analog Value' },
-                                min: -1,
-                                max: 1
+                                title: { display: true, text: 'Analog Value (Int8)' },
+                                min: -128,
+                                max: 127
                             }
                         }
                     }
@@ -196,10 +210,10 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Time (samples)' } },
+                            x: { display: true, title: { display: true, text: 'Sample Index' } },
                             y: { 
                                 display: true, 
-                                title: { display: true, text: 'HRM-raw Value' },
+                                title: { display: true, text: 'HRM-raw Value (Int8)' },
                                 min: -128,
                                 max: 127
                             }
@@ -209,16 +223,59 @@
             );
         }
 
-        function updateChart(chart, value, timestamp) {
-            chart.data.datasets[0].data.push({x: timestamp, y: value});
-            chart.data.labels.push(timestamp);
+        function updateChart(chart, value, maxPoints) {
+            const index = chart.data.labels.length;
+            chart.data.datasets[0].data.push(value);
+            chart.data.labels.push(index);
             
-            // Remove old data points to maintain performance
-            if (chart.data.labels.length > MAX_DATA_POINTS) {
+            // Remove old data points to maintain fixed window
+            if (chart.data.labels.length > maxPoints) {
                 chart.data.datasets[0].data.shift();
                 chart.data.labels.shift();
+                // Re-index labels to keep them sequential
+                for (let i = 0; i < chart.data.labels.length; i++) {
+                    chart.data.labels[i] = i;
+                }
             }
             chart.update('none');
+        }
+
+        function updateDataRate(elementId, count, elapsedMs) {
+            const rate = (count / elapsedMs * 1000).toFixed(1);
+            document.getElementById(elementId).textContent = rate + ' Hz';
+        }
+
+        function startDataRateCalculation() {
+            // Calculate analog data rate every second
+            analogRateInterval = setInterval(() => {
+                const now = Date.now();
+                const elapsed = now - analogLastTime;
+                if (analogDataCount > 0) {
+                    updateDataRate('analogRate', analogDataCount, elapsed);
+                }
+                analogDataCount = 0;
+                analogLastTime = now;
+            }, 1000);
+
+            // Calculate HRM data rate every second
+            hrmRateInterval = setInterval(() => {
+                const now = Date.now();
+                const elapsed = now - hrmLastTime;
+                if (hrmDataCount > 0) {
+                    updateDataRate('hrmRate', hrmDataCount, elapsed);
+                }
+                hrmDataCount = 0;
+                hrmLastTime = now;
+            }, 1000);
+        }
+
+        function stopDataRateCalculation() {
+            if (analogRateInterval) clearInterval(analogRateInterval);
+            if (hrmRateInterval) clearInterval(hrmRateInterval);
+            document.getElementById('analogRate').textContent = '0 Hz';
+            document.getElementById('hrmRate').textContent = '0 Hz';
+            analogDataCount = 0;
+            hrmDataCount = 0;
         }
 
         async function connect() {
@@ -250,6 +307,9 @@
                 document.getElementById('connectBtn').textContent = 'Disconnect';
                 device.addEventListener('gattserverdisconnected', onDisconnected);
                 
+                // Start data rate calculation
+                startDataRateCalculation();
+                
                 console.log('Connected to both characteristics!');
             } catch (error) {
                 alert('Connection failed: ' + error);
@@ -261,22 +321,22 @@
             if (device && device.gatt.connected) {
                 device.gatt.disconnect();
             }
+            stopDataRateCalculation();
         }
 
         function onDisconnected() {
             document.getElementById('statusDot').classList.remove('connected');
             document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+            stopDataRateCalculation();
         }
 
         function handleAnalogData(event) {
             const value = event.target.value;
             // Expecting Int8Array with 1 byte (-128 to 127)
             const scaledValue = value.getInt8(0);
-            // Convert back to original range: [-128, 127] -> [-1, 1]
-            const analogValue = scaledValue / 127.0;
             
-            const timestamp = globalSampleCounter++;
-            updateChart(analogChart, analogValue, timestamp);
+            updateChart(analogChart, scaledValue, MAX_ANALOG_POINTS);
+            analogDataCount++;
         }
 
         function handleHRMData(event) {
@@ -284,8 +344,8 @@
             // Expecting Int8Array with 1 byte (-128 to 127)
             const hrmRaw = value.getInt8(0);
             
-            const timestamp = globalSampleCounter++;
-            updateChart(hrmRawChart, hrmRaw, timestamp);
+            updateChart(hrmRawChart, hrmRaw, MAX_HRM_POINTS);
+            hrmDataCount++;
         }
 
         document.getElementById('connectBtn').addEventListener('click', () => {
