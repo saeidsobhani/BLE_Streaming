@@ -123,6 +123,33 @@
     let hrmRawChart = null;
 
         function initCharts() {
+            function getTickValues() {
+                // Divide MAX_DATA_POINTS into 10 equal parts
+                const ticks = [];
+                const step = Math.round(MAX_DATA_POINTS / 10);
+                for (let i = step; i <= MAX_DATA_POINTS; i += step) {
+                    ticks.push(i);
+                }
+                return ticks;
+            }
+
+            const xAxisConfig = {
+                display: true,
+                title: { display: true, text: 'Sample' },
+                ticks: {
+                    callback: function(value, index, values) {
+                        // Only show ticks at multiples of step
+                        const step = Math.round(MAX_DATA_POINTS / 10);
+                        if ((value % step === 0) && value !== 0) {
+                            return value;
+                        }
+                        return '';
+                    },
+                    autoSkip: false,
+                    maxTicksLimit: 11
+                }
+            };
+
             analogChart = new Chart(
                 document.getElementById('analogChart'),
                 {
@@ -145,7 +172,7 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Sample' } },
+                            x: xAxisConfig,
                             y: { display: true, title: { display: true, text: 'Analog Value' } }
                         }
                     }
@@ -173,7 +200,7 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Sample' } },
+                            x: xAxisConfig,
                             y: { display: true, title: { display: true, text: 'HRM-raw Value' } }
                         }
                     }
@@ -183,7 +210,9 @@
 
         function updateChart(chart, value) {
             chart.data.datasets[0].data.push(value);
-            chart.data.labels.push(chart.data.labels.length);
+            // Label is just the sample number (1-based)
+            let nextLabel = chart.data.labels.length > 0 ? chart.data.labels[chart.data.labels.length - 1] + 1 : 1;
+            chart.data.labels.push(nextLabel);
             if (chart.data.labels.length > MAX_DATA_POINTS) {
                 chart.data.datasets[0].data.shift();
                 chart.data.labels.shift();
@@ -235,10 +264,9 @@
         // Handler for analog characteristic (Int8)
         function handleAnalogData(event) {
             const value = event.target.value;
-            // Int8, range -128 to 127, scale back to [-1, 1]
+            // Int8, range -128 to 127, plot raw value directly
             const analogRaw = value.getInt8(0);
-            const analog = analogRaw / 127;
-            updateChart(analogChart, analog);
+            updateChart(analogChart, analogRaw);
         }
 
         // Handler for HRM-raw characteristic (Int8)
