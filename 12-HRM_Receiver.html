@@ -62,7 +62,7 @@
         }
         .sensor-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
             gap: 20px;
         }
         .sensor-card {
@@ -76,10 +76,21 @@
             font-weight: 600;
             color: #333;
             margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .data-rate-badge {
+            font-size: 12px;
+            background: #667eea;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 500;
         }
         .chart-container {
             position: relative;
-            height: 300px;
+            height: 360px;
             margin-top: 10px;
         }
     </style>
@@ -95,13 +106,19 @@
         </header>
         <div class="sensor-grid">
             <div class="sensor-card">
-                <div class="sensor-title">Raw Analog Value (analogRead(D29))</div>
+                <div class="sensor-title">
+                    <span>Raw Analog Value (analogRead(D29))</span>
+                    <span class="data-rate-badge">200 Hz</span>
+                </div>
                 <div class="chart-container">
                     <canvas id="analogChart"></canvas>
                 </div>
             </div>
             <div class="sensor-card">
-                <div class="sensor-title">HRM-raw Value</div>
+                <div class="sensor-title">
+                    <span>HRM-raw Value</span>
+                    <span class="data-rate-badge">50 Hz</span>
+                </div>
                 <div class="chart-container">
                     <canvas id="hrmRawChart"></canvas>
                 </div>
@@ -111,14 +128,17 @@
     <script>
         // UUIDs must match your Bangle.js GATT server
         const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
-        const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbd';
-        const MAX_DATA_POINTS = 200;
+        const ANALOG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbd'; // 200 Hz analog data
+        const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbe'; // 50 Hz HRM data
+        const MAX_DATA_POINTS = 400; // Increased to show more history at higher sample rate
 
         let device = null;
         let server = null;
+        let analogCharacteristic = null;
         let hrmCharacteristic = null;
         let analogChart = null;
         let hrmRawChart = null;
+        let globalSampleCounter = 0; // Global counter for synchronized x-axis
 
         function initCharts() {
             analogChart = new Chart(
@@ -143,8 +163,13 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Sample' } },
-                            y: { display: true, title: { display: true, text: 'Analog Value' } }
+                            x: { display: true, title: { display: true, text: 'Time (samples)' } },
+                            y: { 
+                                display: true, 
+                                title: { display: true, text: 'Analog Value' },
+                                min: -1,
+                                max: 1
+                            }
                         }
                     }
                 }
@@ -171,17 +196,24 @@
                         animation: false,
                         plugins: { legend: { display: false } },
                         scales: {
-                            x: { display: true, title: { display: true, text: 'Sample' } },
-                            y: { display: true, title: { display: true, text: 'HRM-raw Value' } }
+                            x: { display: true, title: { display: true, text: 'Time (samples)' } },
+                            y: { 
+                                display: true, 
+                                title: { display: true, text: 'HRM-raw Value' },
+                                min: -128,
+                                max: 127
+                            }
                         }
                     }
                 }
             );
         }
 
-        function updateChart(chart, value) {
-            chart.data.datasets[0].data.push(value);
-            chart.data.labels.push(chart.data.labels.length);
+        function updateChart(chart, value, timestamp) {
+            chart.data.datasets[0].data.push({x: timestamp, y: value});
+            chart.data.labels.push(timestamp);
+            
+            // Remove old data points to maintain performance
             if (chart.data.labels.length > MAX_DATA_POINTS) {
                 chart.data.datasets[0].data.shift();
                 chart.data.labels.shift();
@@ -193,20 +225,32 @@
             try {
                 document.getElementById('connectBtn').disabled = true;
                 document.getElementById('statusDot').classList.remove('connected');
+                
                 // Request device
                 device = await navigator.bluetooth.requestDevice({
                     filters: [{ name: 'Bangle.js Sensor' }],
                     optionalServices: [SERVICE_UUID]
                 });
+                
                 server = await device.gatt.connect();
                 const service = await server.getPrimaryService(SERVICE_UUID);
+                
+                // Subscribe to ANALOG characteristic (200 Hz)
+                analogCharacteristic = await service.getCharacteristic(ANALOG_CHAR_UUID);
+                await analogCharacteristic.startNotifications();
+                analogCharacteristic.addEventListener('characteristicvaluechanged', handleAnalogData);
+                
+                // Subscribe to HRM characteristic (50 Hz)
                 hrmCharacteristic = await service.getCharacteristic(HRM_CHAR_UUID);
                 await hrmCharacteristic.startNotifications();
                 hrmCharacteristic.addEventListener('characteristicvaluechanged', handleHRMData);
+                
                 document.getElementById('statusDot').classList.add('connected');
                 document.getElementById('connectBtn').disabled = false;
                 document.getElementById('connectBtn').textContent = 'Disconnect';
                 device.addEventListener('gattserverdisconnected', onDisconnected);
+                
+                console.log('Connected to both characteristics!');
             } catch (error) {
                 alert('Connection failed: ' + error);
                 document.getElementById('connectBtn').disabled = false;
@@ -224,13 +268,24 @@
             document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
         }
 
+        function handleAnalogData(event) {
+            const value = event.target.value;
+            // Expecting Int8Array with 1 byte (-128 to 127)
+            const scaledValue = value.getInt8(0);
+            // Convert back to original range: [-128, 127] -> [-1, 1]
+            const analogValue = scaledValue / 127.0;
+            
+            const timestamp = globalSampleCounter++;
+            updateChart(analogChart, analogValue, timestamp);
+        }
+
         function handleHRMData(event) {
             const value = event.target.value;
-            // Expecting Float32Array([analog, hrmRaw])
-            const analog = value.getFloat32(0, true);
-            const hrmRaw = value.getFloat32(4, true);
-            updateChart(analogChart, analog);
-            updateChart(hrmRawChart, hrmRaw);
+            // Expecting Int8Array with 1 byte (-128 to 127)
+            const hrmRaw = value.getInt8(0);
+            
+            const timestamp = globalSampleCounter++;
+            updateChart(hrmRawChart, hrmRaw, timestamp);
         }
 
         document.getElementById('connectBtn').addEventListener('click', () => {
