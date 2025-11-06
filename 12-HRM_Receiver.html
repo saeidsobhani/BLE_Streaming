@@ -146,30 +146,11 @@
     let hrmRateTimer = null;
 
         function initCharts() {
-            function getTickValues() {
-                // Divide MAX_DATA_POINTS into 10 equal parts
-                const ticks = [];
-                const step = Math.round(MAX_DATA_POINTS / 10);
-                for (let i = step; i <= MAX_DATA_POINTS; i += step) {
-                    ticks.push(i);
-                }
-                return ticks;
-            }
-
             const xAxisConfig = {
                 display: true,
                 title: { display: true, text: 'Sample' },
                 ticks: {
-                    callback: function(value, index, values) {
-                        // Only show ticks at multiples of step
-                        const step = Math.round(MAX_DATA_POINTS / 10);
-                        if ((value % step === 0) && value !== 0) {
-                            return value;
-                        }
-                        return '';
-                    },
-                    autoSkip: false,
-                    maxTicksLimit: 11
+                    display: false  // Hide x-axis tick labels
                 }
             };
 
