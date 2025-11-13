@@ -1,7 +1,6 @@
 import asyncio
 from bleak import BleakClient, BleakScanner
 import time
-import struct
 
 SERVICE_UUID = "f26d62fe-3686-4241-ab06-0dad88068fac"
 ANALOG_CHAR_UUID = "f26d62fe-3686-4241-ab06-0dad88068fbd"
@@ -12,7 +11,8 @@ async def main():
     def on_analog(sender, data):
         nonlocal analog_count
         analog_raw = int.from_bytes(data, byteorder='little', signed=True)
-        # print(f"Received Analog: {analog_raw}")
+        analog_float = analog_raw / 10000.0
+        # print(f"Received Analog: {analog_float}")
         analog_count += 1
 
     async def print_rates():
