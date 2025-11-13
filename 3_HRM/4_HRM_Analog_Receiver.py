@@ -11,8 +11,8 @@ async def main():
     def on_analog(sender, data):
         nonlocal analog_count
         analog_raw = int.from_bytes(data, byteorder='little', signed=True)
-        analog_float = analog_raw / 10000.0
-        # print(f"Received Analog: {analog_float}")
+        # analog_float = analog_raw / 10000.0
+        print(f"Received Analog: {analog_raw}")
         analog_count += 1
 
     async def print_rates():
@@ -23,7 +23,7 @@ async def main():
             now = time.monotonic()
             dt = max(now - last, 1e-6)
             hz = (analog_count - last_count) / dt
-            print(f"Rates: Analog ~ {hz:.1f} Hz")
+            # print(f"Rates: Analog ~ {hz:.1f} Hz")
             last = now
             last_count = analog_count
 

@@ -219,8 +219,8 @@
         const value = event.target.value;
         // Read Int16, little-endian
         const analogRaw = value.getInt16(0, true);
-        const analogFloat = analogRaw / 10000.0;
-        updateChart(analogChart, analogFloat);
+        // const analogFloat = analogRaw / 10000.0;
+        updateChart(analogChart, analogRaw);
         analogSampleCount++;
     }
 
