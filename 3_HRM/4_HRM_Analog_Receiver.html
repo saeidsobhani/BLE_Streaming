@@ -13,7 +13,7 @@
             padding: 20px;
         }
         .container {
-            max-width: 700px;
+            max-width: 1200px;
             margin: 0 auto;
         }
         header {
@@ -217,7 +217,7 @@
 
     function handleAnalogData(event) {
         const value = event.target.value;
-        const analogRaw = value.getInt16(0, true);
+        const analogRaw = value.getInt8(0);
         updateChart(analogChart, analogRaw);
         analogSampleCount++;
     }

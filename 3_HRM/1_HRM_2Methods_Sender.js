@@ -41,7 +41,6 @@ setInterval(function() {
   var analog = analogRead(D29); // floating point value (unknown range)
   var analogScaled = analog * 10000;
   analogScaled = Math.max(-32768, Math.min(32767, analogScaled | 0)); // Clamp to Int16 range
-  // Now you can send analogScaled as Int16
   //print("Sending Analog: raw =", analog, ", scaled =", analogScaled);
   if (connected) {
     NRF.updateServices({
