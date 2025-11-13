@@ -128,7 +128,7 @@
             title: { display: true, text: 'Sample' },
             ticks: {
                 callback: function(value) {
-                    const step = Math.round(MAX_DATA_POINTS / 50);
+                    const step = Math.round(MAX_DATA_POINTS / 10);
                     if ((value % step === 0) && value !== 0) {
                         return value;
                     }
