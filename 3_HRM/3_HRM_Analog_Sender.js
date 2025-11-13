@@ -26,7 +26,7 @@ NRF.setAdvertising({}, {
 // Send analog raw data at 100 Hz
 setInterval(function() {
   var analog = analogRead(D29); // floating point value (unknown range)
-  var analogScaled = Math.round(analog * 1000); // scale for better Int8 resolution
+  var analogScaled = analog * 1000; // scale for better Int8 resolution
   analogScaled = Math.max(-128, Math.min(127, analogScaled)); // Clamp to Int8 range
   //print("Sending Analog: raw =", analog, ", scaled =", analogScaled);
   if (connected) {
@@ -39,4 +39,4 @@ setInterval(function() {
       }
     });
   }
-}, 2); // 2 ms interval = 500 Hz
+}, 5); // 5 ms interval = 200 Hz
