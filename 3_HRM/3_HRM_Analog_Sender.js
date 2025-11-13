@@ -12,7 +12,7 @@ NRF.setServices({
       description: 'Analog raw',
       notify: true,
       readable: true,
-      value: new Int16Array(1).buffer // One byte for analog reading (Int16)
+      value: new Int8Array(1).buffer // One byte for analog reading (Int8)
     }
   }
 }, { uart: true });
@@ -26,13 +26,12 @@ NRF.setAdvertising({}, {
 // Send analog raw data at 100 Hz
 setInterval(function() {
   var analog = analogRead(D29); // floating point value (unknown range)
-  var analogScaled = analog * 10000;
-  analogScaled = Math.max(-32768, Math.min(32767, analogScaled | 0)); // Clamp to Int16 range
+  var analogScaled = analog * 128; // Scale to Int8 range
   if (connected) {
     NRF.updateServices({
       'f26d62fe-3686-4241-ab06-0dad88068fac': {
         'f26d62fe-3686-4241-ab06-0dad88068fbd': {
-          value: new Int16Array([analogScaled]).buffer,
+          value: new Int8Array([analogScaled]).buffer,
           notify: true
         }
       }
