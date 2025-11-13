@@ -12,8 +12,7 @@ async def main():
         nonlocal analog_count
         if len(data) == 1:
             analog_raw = int.from_bytes(data, byteorder='little', signed=True)
-            analog_float = analog_raw / 128.0
-            print(f"Received Analog: {analog_float}")
+            # print(f"Received Analog: {analog_raw}")
         else:
             print(f"Unexpected data length: {len(data)} bytes, raw: {data}")
         analog_count += 1
