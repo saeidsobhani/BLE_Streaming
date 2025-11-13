@@ -113,7 +113,7 @@
     // UUIDs must match your Bangle.js GATT server
     const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
     const ANALOG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbd';
-    const MAX_DATA_POINTS = 200;
+    const MAX_DATA_POINTS = 500;
 
     let device = null;
     let server = null;
@@ -128,7 +128,7 @@
             title: { display: true, text: 'Sample' },
             ticks: {
                 callback: function(value) {
-                    const step = Math.round(MAX_DATA_POINTS / 10);
+                    const step = Math.round(MAX_DATA_POINTS / 50);
                     if ((value % step === 0) && value !== 0) {
                         return value;
                     }
