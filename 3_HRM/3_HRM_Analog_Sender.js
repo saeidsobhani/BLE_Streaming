@@ -23,7 +23,7 @@ NRF.setAdvertising({}, {
   services: ['f26d62fe-3686-4241-ab06-0dad88068fac']
 });
 
-// Send analog raw data at 200 Hz
+// Send analog raw data at 333 Hz
 setInterval(function() {
   var analog = analogRead(D29); // floating point value (unknown range)
   var analogScaled = analog * 128 | 0; // Scale to Int8 range
@@ -37,4 +37,4 @@ setInterval(function() {
       }
     });
   }
-}, 5); // 5 ms interval = 200 Hz
+}, 3); // 3 ms interval = 333 Hz
