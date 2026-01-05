@@ -262,29 +262,6 @@
             </div>
         </header>
 
-        <div class="intro-section">
-            <h2>📱 About This Project</h2>
-            <p>
-                This project investigates how to <strong>optimize Bluetooth Low Energy (BLE) data transmission</strong> 
-                between a Bangle.js smartwatch and a host computer using adaptive compression and quantization methods.
-            </p>
-            <p>
-                The research focuses on streaming sensor data (accelerometer, magnetometer, heart rate) and evaluates 
-                various BLE optimization techniques including sample bundling, buffer management, and multi-sensor fusion strategies.
-            </p>
-        </div>
-
-        <div class="instructions">
-            <h3>⚡ Quick Start Guide</h3>
-            <ol>
-                <li>Click on any dashboard below to open the Web Bluetooth interface</li>
-                <li>Upload the corresponding JavaScript code to your Bangle.js using the <a href="https://www.espruino.com/ide/" target="_blank">Espruino IDE</a></li>
-                <li>Click "Connect to Bangle.js" button in the dashboard</li>
-                <li>Select "Bangle.js Sensor" from the Bluetooth device list</li>
-                <li>Watch real-time sensor data streaming!</li>
-            </ol>
-        </div>
-
         <h2 style="color: white; text-align: center; margin-bottom: 20px; font-size: 2em;">🎛️ Interactive Dashboards</h2>
 
         <div class="dashboards-grid">
@@ -321,7 +298,7 @@
                 <p>Dual-rate heart rate monitoring with both analog raw and processed HRM data streams.</p>
                 <div class="features">
                     <ul>
-                        <li>Analog raw (200 Hz)</li>
+                        <li>Analog raw (100 Hz)</li>
                         <li>HRM processed (50 Hz)</li>
                         <li>Dual characteristic streaming</li>
                         <li>Real-time waveform display</li>
@@ -388,7 +365,7 @@
             <div class="experiment-list">
                 <div class="experiment-item">
                     <h4>Dual-Rate HRM</h4>
-                    <p>Analog raw (200Hz) + HRM processed (50Hz)</p>
+                    <p>Analog raw (100Hz) + HRM processed (50Hz)</p>
                     <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/3_HRM/1_HRM_2Methods_Sender.js" class="file-link" target="_blank">📄 Server</a>
                     <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/3_HRM/2_HRM_2Methods_Receiver.html" class="file-link" target="_blank">📄 Receiver</a>
                 </div>
@@ -448,9 +425,6 @@
                 <strong>BLE Streaming Project</strong> | 
                 <a href="https://github.com/saeidsobhani/BLE_Streaming" target="_blank">GitHub Repository</a> | 
                 <a href="https://ubi29.informatik.uni-siegen.de/" target="_blank">Ubiquitous Computing Lab</a>
-            </p>
-            <p style="margin-top: 10px; font-size: 0.9em;">
-                © 2026 Saeid Sobhani | University of Siegen
             </p>
         </footer>
     </div>
