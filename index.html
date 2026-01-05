@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BLE Streaming - Adaptive Optimization of Bluetooth Data Transfer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header-content {
+            text-align: center;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.2em;
+            margin-bottom: 20px;
+        }
+        
+        .thesis-info {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .thesis-info p {
+            color: #555;
+            margin: 5px 0;
+        }
+        
+        .thesis-info strong {
+            color: #333;
+        }
+        
+        .intro-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .intro-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.8em;
+        }
+        
+        .intro-section p {
+            color: #555;
+            margin-bottom: 10px;
+        }
+        
+        .dashboards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .dashboard-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+        
+        .dashboard-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .dashboard-card .icon {
+            font-size: 1.5em;
+        }
+        
+        .dashboard-card p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+        
+        .dashboard-card .features {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+        
+        .dashboard-card .features li {
+            color: #555;
+            margin-left: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: background 0.3s;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+        }
+        
+        .btn-secondary {
+            background: #10b981;
+        }
+        
+        .btn-secondary:hover {
+            background: #059669;
+        }
+        
+        .instructions {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .instructions h3 {
+            color: #856404;
+            margin-bottom: 10px;
+        }
+        
+        .instructions ol {
+            color: #856404;
+            margin-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 8px;
+        }
+        
+        footer {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            margin-top: 40px;
+        }
+        
+        footer a {
+            color: white;
+            text-decoration: underline;
+        }
+        
+        .experiment-category {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .experiment-category h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.6em;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .experiment-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+        }
+        
+        .experiment-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .experiment-item h4 {
+            color: #333;
+            margin-bottom: 5px;
+            font-size: 1em;
+        }
+        
+        .experiment-item p {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 8px;
+        }
+        
+        .file-link {
+            display: inline-block;
+            font-size: 0.8em;
+            color: #667eea;
+            text-decoration: none;
+            margin-right: 10px;
+        }
+        
+        .file-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <h1>🎯 BLE Streaming Project</h1>
+                <p class="subtitle">Adaptive Optimization of Bluetooth Data Transfer on Wearable Platforms</p>
+                <div class="thesis-info">
+                    <p><strong>Master's Thesis by:</strong> Saeid Sobhani</p>
+                    <p><strong>Supervisor:</strong> Prof. Dr. Kristof Van Laerhoven</p>
+                    <p><strong>Institution:</strong> University of Siegen – Chair for Ubiquitous Computing</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="intro-section">
+            <h2>📱 About This Project</h2>
+            <p>
+                This project investigates how to <strong>optimize Bluetooth Low Energy (BLE) data transmission</strong> 
+                between a Bangle.js smartwatch and a host computer using adaptive compression and quantization methods.
+            </p>
+            <p>
+                The research focuses on streaming sensor data (accelerometer, magnetometer, heart rate) and evaluates 
+                various BLE optimization techniques including sample bundling, buffer management, and multi-sensor fusion strategies.
+            </p>
+        </div>
+
+        <div class="instructions">
+            <h3>⚡ Quick Start Guide</h3>
+            <ol>
+                <li>Click on any dashboard below to open the Web Bluetooth interface</li>
+                <li>Upload the corresponding JavaScript code to your Bangle.js using the <a href="https://www.espruino.com/ide/" target="_blank">Espruino IDE</a></li>
+                <li>Click "Connect to Bangle.js" button in the dashboard</li>
+                <li>Select "Bangle.js Sensor" from the Bluetooth device list</li>
+                <li>Watch real-time sensor data streaming!</li>
+            </ol>
+        </div>
+
+        <h2 style="color: white; text-align: center; margin-bottom: 20px; font-size: 2em;">🎛️ Interactive Dashboards</h2>
+
+        <div class="dashboards-grid">
+            <div class="dashboard-card">
+                <h3><span class="icon">📊</span> Accelerometer Dashboard</h3>
+                <p>Real-time visualization of 3-axis accelerometer data streaming via BLE at up to 1000 Hz.</p>
+                <div class="features">
+                    <ul>
+                        <li>Real-time line chart visualization</li>
+                        <li>Data rate monitoring</li>
+                        <li>Screenshot capability</li>
+                        <li>Optimized for high-frequency data</li>
+                    </ul>
+                </div>
+                <a href="1_Accelerometer/8_Accelerometer_WebBLE_Dashboard_LineGraph.html" class="btn">Open Dashboard</a>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><span class="icon">🧲</span> Magnetometer Dashboard</h3>
+                <p>Visualize 3-axis magnetometer data in real-time with Web Bluetooth connectivity.</p>
+                <div class="features">
+                    <ul>
+                        <li>Magnetic field strength (µT)</li>
+                        <li>Real-time chart updates</li>
+                        <li>100 Hz sampling rate</li>
+                        <li>Clean, responsive interface</li>
+                    </ul>
+                </div>
+                <a href="2_Magnetometer/3_Magnetometer_WebBLE_Dashboard.html" class="btn">Open Dashboard</a>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><span class="icon">💓</span> Heart Rate Monitor</h3>
+                <p>Dual-rate heart rate monitoring with both analog raw and processed HRM data streams.</p>
+                <div class="features">
+                    <ul>
+                        <li>Analog raw (200 Hz)</li>
+                        <li>HRM processed (50 Hz)</li>
+                        <li>Dual characteristic streaming</li>
+                        <li>Real-time waveform display</li>
+                    </ul>
+                </div>
+                <a href="3_HRM/2_HRM_2Methods_Receiver.html" class="btn">Open Dashboard</a>
+            </div>
+
+            <div class="dashboard-card">
+                <h3><span class="icon">🔄</span> Multi-Sensor Dashboard</h3>
+                <p>Combined accelerometer and magnetometer streaming with advanced visualization.</p>
+                <div class="features">
+                    <ul>
+                        <li>Dual sensor visualization</li>
+                        <li>Independent rate monitoring</li>
+                        <li>Optimized data bundling</li>
+                        <li>Comprehensive sensor fusion</li>
+                    </ul>
+                </div>
+                <a href="4_Accelerometer_and_Magnetometer/0-WebBLE_Dashboard_LineGraph.html" class="btn">Open Dashboard</a>
+            </div>
+        </div>
+
+        <div class="experiment-category">
+            <h2>🔬 Experiment Categories</h2>
+            
+            <h3 style="color: #333; margin-top: 20px; margin-bottom: 15px;">1️⃣ Accelerometer Experiments</h3>
+            <div class="experiment-list">
+                <div class="experiment-item">
+                    <h4>Single Sample Direct Streaming</h4>
+                    <p>Baseline: sends each sample individually</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/1_Accelerometer/1_Single_Sample_Direct_Streaming_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/1_Accelerometer/2_Single_Sample_Direct_Streaming_Receiver.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>8-Sample Bundling</h4>
+                    <p>Groups 8 samples together to reduce BLE overhead</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/1_Accelerometer/3_Eight_Samples_Bundling_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/1_Accelerometer/4_Eight_Samples_Bundling_Receiver.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>FIFO-Based Streaming</h4>
+                    <p>Uses hardware buffer with interruption</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/1_Accelerometer/5_FIFO_Based_Streaming_with_Interruption_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>Buffer Streaming</h4>
+                    <p>Optimized buffering without interruption</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/1_Accelerometer/6_Buffer_Streaming_Without_Interruption_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                </div>
+            </div>
+
+            <h3 style="color: #333; margin-top: 30px; margin-bottom: 15px;">2️⃣ Magnetometer Experiments</h3>
+            <div class="experiment-list">
+                <div class="experiment-item">
+                    <h4>Magnetometer Streaming</h4>
+                    <p>Standalone 3-axis magnetometer at 100 Hz</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/2_Magnetometer/1_Magnetometer_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/2_Magnetometer/2_Magnetometer_Receiver.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+            </div>
+
+            <h3 style="color: #333; margin-top: 30px; margin-bottom: 15px;">3️⃣ Heart Rate Monitor Experiments</h3>
+            <div class="experiment-list">
+                <div class="experiment-item">
+                    <h4>Dual-Rate HRM</h4>
+                    <p>Analog raw (200Hz) + HRM processed (50Hz)</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/3_HRM/1_HRM_2Methods_Sender.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/3_HRM/2_HRM_2Methods_Receiver.html" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>Analog HRM</h4>
+                    <p>High-frequency analog sensor streaming</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/3_HRM/3_HRM_Analog_Sender.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/3_HRM/4_HRM_Analog_Receiver.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+            </div>
+
+            <h3 style="color: #333; margin-top: 30px; margin-bottom: 15px;">4️⃣ Multi-Sensor Fusion</h3>
+            <div class="experiment-list">
+                <div class="experiment-item">
+                    <h4>Two Characteristics</h4>
+                    <p>Separate BLE characteristics for each sensor</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/4_Accelerometer_and_Magnetometer/1-Two_Characteristics_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/4_Accelerometer_and_Magnetometer/2-Two_Characteristics_Receiver.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>One Characteristic Unbundled</h4>
+                    <p>Combined but sent separately</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/4_Accelerometer_and_Magnetometer/3-One_Characteristic_GATT_Server_Unbundled.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/4_Accelerometer_and_Magnetometer/4-One_Characteristic_Receiver_Unbundled.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>4-Sample Bundled</h4>
+                    <p>Optimized bundling for efficiency</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/4_Accelerometer_and_Magnetometer/5-One_Characteristic_GATT_Server_4Sample_Bundled.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/4_Accelerometer_and_Magnetometer/6-One_Characteristic_Receiver_4Sample_Bundled.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+            </div>
+
+            <h3 style="color: #333; margin-top: 30px; margin-bottom: 15px;">5️⃣ Synthetic Data Tests</h3>
+            <div class="experiment-list">
+                <div class="experiment-item">
+                    <h4>Random Accelerometer</h4>
+                    <p>Synthetic random data for testing</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/5_Synthetic/1-Random_Accel_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>Constant Accelerometer</h4>
+                    <p>Constant values for baseline testing</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/5_Synthetic/2-Const_Accel_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                </div>
+                <div class="experiment-item">
+                    <h4>50-Byte Payloads</h4>
+                    <p>Fixed payload size for throughput benchmarking</p>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/5_Synthetic/4-Const_50_Bytes_GATT_Server.js" class="file-link" target="_blank">📄 Server</a>
+                    <a href="https://github.com/saeidsobhani/BLE_Streaming/blob/main/5_Synthetic/5-Const_50_Bytes_Receiver.py" class="file-link" target="_blank">📄 Receiver</a>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p>
+                <strong>BLE Streaming Project</strong> | 
+                <a href="https://github.com/saeidsobhani/BLE_Streaming" target="_blank">GitHub Repository</a> | 
+                <a href="https://ubi29.informatik.uni-siegen.de/" target="_blank">Ubiquitous Computing Lab</a>
+            </p>
+            <p style="margin-top: 10px; font-size: 0.9em;">
+                © 2026 Saeid Sobhani | University of Siegen
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
