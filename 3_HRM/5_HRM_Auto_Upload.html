@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle.js HRM Dashboard - Auto Upload</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://www.puck-js.com/puck.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin: 0;
+        }
+        #connectBtn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+        #connectBtn:hover {
+            background: #5568d3;
+        }
+        #connectBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-dot.connected {
+            background: #10b981;
+        }
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 20px;
+        }
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .sensor-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .data-rate {
+            font-size: 14px;
+            font-weight: normal;
+            color: #666;
+            background: #f0f0f0;
+            padding: 4px 10px;
+            border-radius: 4px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 10px;
+        }
+        .back-btn { background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: background 0.3s; font-weight: 600; text-decoration: none; display: inline-block; }
+        .back-btn:hover { background: #4b5563; }
+        .nav-bar { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .error-message {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #991b1b;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="../index.html" class="back-btn">← Back to Dashboard</a>
+        </div>
+        <header>
+            <h1>Bangle.js HRM Dashboard (Auto Upload)</h1>
+            <div>
+                <span class="status-dot" id="statusDot"></span>
+                <button id="connectBtn">Connect to Bangle.js</button>
+            </div>
+        </header>
+        <div class="error-message" id="errorMessage"></div>
+        <div class="sensor-grid">
+            <div class="sensor-card">
+                <div class="sensor-title">
+                    <span>Raw Analog Value (analogRead(D29))</span>
+                    <span class="data-rate" id="analogRate">0 Hz</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="analogChart"></canvas>
+                </div>
+            </div>
+            <div class="sensor-card">
+                <div class="sensor-title">
+                    <span>HRM-raw Value</span>
+                    <span class="data-rate" id="hrmRate">0 Hz</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="hrmRawChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var BANGLE_CODE = `
+            Bangle.setHRMPower(1); // turn HRM on
+            
+            // Store latest HRM-raw value
+            var latestHRMRaw = 0;
+            Bangle.on('HRM-raw', function(hrm) {
+                latestHRMRaw = hrm.raw;
+            });
+            
+            // Send analog raw data at 100 Hz
+            setInterval(function() {
+                var analog = analogRead(D29); // floating point value
+                var analogScaled = analog * 10000;
+                analogScaled = Math.max(-32768, Math.min(32767, analogScaled | 0)); // Clamp to Int16 range
+                // Send as "A,value"
+                Bluetooth.println("A," + analogScaled);
+            }, 10); // 10 ms interval = 100 Hz
+            
+            // Send HRM.raw at 50 Hz
+            setInterval(function() {
+                var hrmRaw = latestHRMRaw; // HRM-raw value (already in -128 to 127 range)
+                // Send as "H,value"
+                Bluetooth.println("H," + hrmRaw);
+            }, 20); // 20 ms interval = 50 Hz
+        `;
+
+        const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
+        const ANALOG_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbd';
+        const HRM_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fbe';
+        const MAX_DATA_POINTS = 200;
+
+        let connection = null;
+        let analogChart = null;
+        let hrmRawChart = null;
+        
+        // Data rate tracking
+        let analogSampleCount = 0;
+        let hrmSampleCount = 0;
+        let analogRateTimer = null;
+        let hrmRateTimer = null;
+
+        function initCharts() {
+            function getTickValues() {
+                const ticks = [];
+                const step = Math.round(MAX_DATA_POINTS / 10);
+                for (let i = step; i <= MAX_DATA_POINTS; i += step) {
+                    ticks.push(i);
+                }
+                return ticks;
+            }
+
+            const xAxisConfig = {
+                display: true,
+                title: { display: true, text: 'Sample' },
+                ticks: {
+                    callback: function(value, index, values) {
+                        const step = Math.round(MAX_DATA_POINTS / 10);
+                        if ((value % step === 0) && value !== 0) {
+                            return value;
+                        }
+                        return '';
+                    },
+                    autoSkip: false,
+                    maxTicksLimit: 11
+                }
+            };
+
+            analogChart = new Chart(
+                document.getElementById('analogChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Analog Value',
+                            data: [],
+                            borderColor: '#667eea',
+                            backgroundColor: 'rgba(102,126,234,0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: xAxisConfig,
+                            y: { display: true, title: { display: true, text: 'Analog Value' } }
+                        }
+                    }
+                }
+            );
+            
+            hrmRawChart = new Chart(
+                document.getElementById('hrmRawChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'HRM-raw',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16,185,129,0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: xAxisConfig,
+                            y: { display: true, title: { display: true, text: 'HRM-raw Value' } }
+                        }
+                    }
+                }
+            );
+        }
+
+        function updateChart(chart, value) {
+            chart.data.datasets[0].data.push(value);
+            let nextLabel = chart.data.labels.length > 0 ? chart.data.labels[chart.data.labels.length - 1] + 1 : 1;
+            chart.data.labels.push(nextLabel);
+            if (chart.data.labels.length > MAX_DATA_POINTS) {
+                chart.data.datasets[0].data.shift();
+                chart.data.labels.shift();
+            }
+            chart.update('none');
+        }
+
+        async function connect() {
+            if (connection) {
+                connection.close();
+                connection = undefined;
+            }
+            
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('statusDot').classList.remove('connected');
+            
+            console.log("Attempting to connect with Puck.js library...");
+            
+            Puck.connect(function (c) {
+                console.log("Puck.connect callback triggered, connection:", c);
+                if (!c) {
+                    console.error("Connection failed - no device returned");
+                    const errorMsg = document.getElementById('errorMessage');
+                    errorMsg.textContent = '❌ Connection failed: Could not connect to device. Make sure your Bangle.js is on and nearby.';
+                    errorMsg.style.display = 'block';
+                    document.getElementById('connectBtn').disabled = false;
+                    return;
+                }
+                console.log("Connection successful!");
+                connection = c;
+                
+                var buf = "";
+                connection.on("data", function (d) {
+                    buf += d;
+                    var l = buf.split("\n");
+                    buf = l.pop();
+                    l.forEach(onLine);
+                });
+                
+                connection.write("reset();\n", function () {
+                    setTimeout(function () {
+                        connection.write("\x03\x10if(1){" + BANGLE_CODE + "}\n", function () {
+                            console.log("Code uploaded successfully!");
+                            
+                            document.getElementById('statusDot').classList.add('connected');
+                            document.getElementById('connectBtn').disabled = false;
+                            document.getElementById('connectBtn').textContent = 'Disconnect';
+                            startDataRateMonitoring();
+                        });
+                    }, 1500);
+                });
+            });
+        }
+
+        function onLine(line) {
+            if (line.length < 3) return; // Skip empty or short lines
+            
+            try {
+                // Parse format: "A,value" for analog or "H,value" for HRM
+                const parts = line.trim().split(',');
+                if (parts.length === 2) {
+                    const type = parts[0];
+                    const value = parseInt(parts[1]);
+                    
+                    if (type === 'A') {
+                        // Analog data
+                        updateChart(analogChart, value);
+                        analogSampleCount++;
+                    } else if (type === 'H') {
+                        // HRM data
+                        updateChart(hrmRawChart, value);
+                        hrmSampleCount++;
+                    }
+                }
+            } catch (e) {
+                console.error("Error parsing data:", e, line);
+            }
+        }
+
+        function disconnect() {
+            if (connection) {
+                connection.close();
+                connection = undefined;
+                onDisconnected();
+            }
+        }
+
+        function onDisconnected() {
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+            document.getElementById('connectBtn').disabled = false;
+            stopDataRateMonitoring();
+        }
+
+        // Start data rate monitoring
+        function startDataRateMonitoring() {
+            // Update analog rate every second
+            analogRateTimer = setInterval(() => {
+                document.getElementById('analogRate').textContent = analogSampleCount + ' Hz';
+                analogSampleCount = 0;
+            }, 1000);
+            
+            // Update HRM rate every second
+            hrmRateTimer = setInterval(() => {
+                document.getElementById('hrmRate').textContent = hrmSampleCount + ' Hz';
+                hrmSampleCount = 0;
+            }, 1000);
+        }
+        
+        // Stop data rate monitoring
+        function stopDataRateMonitoring() {
+            if (analogRateTimer) {
+                clearInterval(analogRateTimer);
+                analogRateTimer = null;
+            }
+            if (hrmRateTimer) {
+                clearInterval(hrmRateTimer);
+                hrmRateTimer = null;
+            }
+            document.getElementById('analogRate').textContent = '0 Hz';
+            document.getElementById('hrmRate').textContent = '0 Hz';
+            analogSampleCount = 0;
+            hrmSampleCount = 0;
+        }
+
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            if (connection) {
+                disconnect();
+            } else {
+                connect();
+            }
+        });
+
+        window.addEventListener('load', () => {
+            initCharts();
+        });
+    </script>
+</body>
+</html>
