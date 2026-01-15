@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle.js Accelerometer Dashboard - BLE Streaming (No Interruption)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://www.puck-js.com/puck.js"></script>
+    <style>
+        /* ...existing styles... */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1260px; margin: 0 auto; } /* Increased by 40%: 900 * 1.4 = 1260px */
+        header { background: white; border-radius: 10px; padding: 20px 30px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        h1 { color: #333; font-size: 24px; margin: 0; }
+        .subtitle { color: #666; font-size: 14px; margin-top: 5px; }
+        .connection-status { display: flex; align-items: center; gap: 15px; }
+        #connectBtn { background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s; font-weight: 600; }
+        #connectBtn:hover { background: #5568d3; }
+        #connectBtn:disabled { background: #ccc; cursor: not-allowed; }
+        #screenshotBtn { background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; transition: background 0.3s; font-weight: 600; }
+        #screenshotBtn:hover { background: #059669; }
+        #screenshotBtn:disabled { background: #ccc; cursor: not-allowed; }
+        .status-indicator { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #666; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; background: #ccc; animation: pulse 2s infinite; }
+        .status-dot.connected { background: #10b981; }
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+        .sensor-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .sensor-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 2px solid #f0f0f0; }
+        .sensor-title { font-size: 18px; font-weight: 600; color: #333; }
+        .sensor-rate { display: flex; flex-direction: column; align-items: flex-end; }
+        .rate-label { font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+        .rate-value { font-size: 24px; font-weight: 700; color: #667eea; font-family: 'Courier New', monospace; }
+        .rate-unit { font-size: 14px; color: #999; margin-left: 4px; }
+        .chart-container { position: relative; height: 360px; margin-top: 10px; } /* Increased by 20%: 300 * 1.2 = 360px */
+        .legend { display: flex; justify-content: center; gap: 20px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #f0f0f0; }
+        .legend-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #666; }
+        .legend-color { width: 16px; height: 3px; border-radius: 2px; }
+        .error-message { background: #fee2e2; border-left: 4px solid #ef4444; padding: 15px; border-radius: 6px; margin-bottom: 20px; color: #991b1b; display: none; }
+        .back-btn { background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: background 0.3s; font-weight: 600; text-decoration: none; display: inline-block; }
+        .back-btn:hover { background: #4b5563; }
+        .nav-bar { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="../index.html" class="back-btn">← Back to Dashboard</a>
+        </div>
+        <header>
+            <div>
+                <h1>🎯 Bangle.js Accelerometer Dashboard</h1>
+                <div class="subtitle">Real-time BLE Accelerometer Streaming (Stream Mode - No Interruption)</div>
+            </div>
+            <div class="connection-status">
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+                <button id="screenshotBtn">📸 Screenshot</button>
+                <button id="connectBtn">Connect to Bangle.js</button>
+            </div>
+        </header>
+        <div class="error-message" id="errorMessage"></div>
+        <div class="sensor-card">
+            <div class="sensor-header">
+                <div class="sensor-title">📊 Accelerometer</div>
+                <div class="sensor-rate">
+                    <div class="rate-label">Data Rate</div>
+                    <div>
+                        <span class="rate-value" id="accelRate">0.0</span>
+                        <span class="rate-unit">Hz</span>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <canvas id="accelChart"></canvas>
+            </div>
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ef4444;"></div>
+                    <span>X-axis</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #10b981;"></div>
+                    <span>Y-axis</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3b82f6;"></div>
+                    <span>Z-axis</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+
+        var BANGLE_CODE = `
+            var i2c = new I2C();
+            i2c.setup({scl:14, sda:15});
+            i2c.writeTo(0x1E, [0x18, 0b00101100]); // Enter standby mode - output range +-4g
+            i2c.writeTo(0x1E, [0x1B, 0x07]);       // Set ODCNTL to have 1600 Hz ODR
+            i2c.writeTo(0x1E, [0x3B, 0b10000001]); // BUF_CNTL2: BUFE=1(active) / BUF_RES=0(8-bit MSB) / BFIE=0(Buffer interupt disable) / Stream Mode
+            i2c.writeTo(0x1E, [0x18, 0b10101100]); // Return to active mode
+
+            setInterval(function() {
+                var buf = Bangle.accelRd(0x3F, 48); // Read 48 bytes from Stream buffer
+                
+                if (buf && buf.length === 48) {
+                    // Convert 48 bytes to base64 and send via Bluetooth.print
+                    var b64 = btoa(String.fromCharCode.apply(null, buf));
+                    Bluetooth.println(b64);
+                }
+            }, 16); // every 16ms
+        `;
+        // ============================================================
+        
+        // UUIDs must match your Bangle.js GATT server
+        const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
+        const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
+        
+        // Optimized settings for real-time visualization at ~1000 Hz
+        const MAX_DATA_POINTS = 2000; // 2000 points at ~1000Hz = 2 seconds of data (shorter window = more responsive)
+        const SAMPLES_PER_NOTIFICATION = 16; // 48 bytes / (3 axes * 1 byte per axis) = 16 samples
+        const DOWNSAMPLE_FACTOR = 2; // Downsample by a factor of 2
+        const BATCH_UPDATE_SIZE = 16; // Update chart after receiving full packet (all 16 samples)
+        
+        // State
+        let device = null;
+        let server = null;
+        let accelCharacteristic = null;
+        let accelSampleCount = 0;
+        let lastRateUpdate = Date.now();
+        let accelChart = null;
+        let rateUpdateInterval = null;
+        let sampleCounter = 0;
+        let startTime = null;
+        let connection = null;
+        
+        // Batch buffer for chart updates (reduces overhead)
+        let batchBuffer = { x: [], y: [], z: [], timestamps: [] };
+        let sampleNumber = 0; // Track sample number for X-axis (absolute counter)
+        let displaySampleNumber = 0; // Track relative sample number for display (0-2000)
+        // Initialize chart
+        function initChart() {
+            accelChart = new Chart(
+                document.getElementById('accelChart'),
+                {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [
+                            { label: 'X', data: [], borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { label: 'Y', data: [], borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 },
+                            { label: 'Z', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, tension: 0.4 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: false,
+                        plugins: { legend: { display: false }, title: { display: false } },
+                        scales: {
+                            x: { 
+                                display: true, 
+                                title: { display: true, text: 'Time (samples)' }, 
+                                ticks: { 
+                                    maxTicksLimit: 11, // Show 0, 200, 400, ..., 2000 (11 ticks total)
+                                    callback: function(value, index, values) {
+                                        // Always show labels at 0, 200, 400, 600, ..., 2000
+                                        const sampleNum = Math.round(value);
+                                        if (sampleNum % 200 === 0) {
+                                            return sampleNum;
+                                        }
+                                        return null; // Hide other labels
+                                    }
+                                },
+                                min: 0,
+                                max: 2000
+                            },
+                            y: { 
+                                display: true, 
+                                title: { display: true, text: 'Acceleration (g)' },
+                                suggestedMin: -4,
+                                suggestedMax: 4
+                            }
+                        },
+                        interaction: { intersect: false, mode: 'index' }
+                    }
+                }
+            );
+        }
+        // Update chart data with time-based X-axis (batch update for performance)
+        function updateChartBatch() {
+            if (batchBuffer.x.length === 0) return;
+            
+            const maxPoints = MAX_DATA_POINTS;
+            
+            // Add all batched samples at once
+            accelChart.data.datasets[0].data.push(...batchBuffer.x);
+            accelChart.data.datasets[1].data.push(...batchBuffer.y);
+            accelChart.data.datasets[2].data.push(...batchBuffer.z);
+            accelChart.data.labels.push(...batchBuffer.timestamps);
+            
+            // Trim excess points
+            while (accelChart.data.labels.length > maxPoints) {
+                accelChart.data.datasets[0].data.shift();
+                accelChart.data.datasets[1].data.shift();
+                accelChart.data.datasets[2].data.shift();
+                accelChart.data.labels.shift();
+            }
+            
+            // Update X-axis to always show 0-2000 range
+            // Map the actual labels to relative positions (0-2000)
+            if (accelChart.data.labels.length > 0) {
+                const firstLabel = accelChart.data.labels[0];
+                accelChart.data.labels = accelChart.data.labels.map((label, idx) => {
+                    return (label - firstLabel) % 2000;
+                });
+            }
+            
+            // Single chart update for all samples (much faster)
+            accelChart.update('none');
+            
+            // Clear batch buffer
+            batchBuffer = { x: [], y: [], z: [], timestamps: [] };
+        }
+        // Handle accelerometer data (48 bytes, 16 samples, 3 axes, 1 byte per axis)
+        // Optimized for real-time: batch process all 16 samples, then update chart once
+        function handleAccelData(event) {
+            const value = event.target.value;
+            const dataView = new DataView(value.buffer);
+            
+            // Process all 16 samples in the packet
+            for (let i = 0; i < SAMPLES_PER_NOTIFICATION; i++) {
+                const x_raw = dataView.getInt8(i * 3);
+                const y_raw = dataView.getInt8(i * 3 + 1);
+                const z_raw = dataView.getInt8(i * 3 + 2);
+                
+                // Convert to g (assuming +-128 = +-4g, so scale = 4/128 = 0.03125g/LSB)
+                const x_g = x_raw * 0.03125;
+                const y_g = y_raw * 0.03125;
+                const z_g = z_raw * 0.03125;
+                
+                // Add to batch buffer with sample number
+                batchBuffer.x.push(x_g);
+                batchBuffer.y.push(y_g);
+                batchBuffer.z.push(z_g);
+                batchBuffer.timestamps.push(displaySampleNumber);
+                
+                sampleNumber++;
+                displaySampleNumber = sampleNumber % 2000; // Keep in 0-2000 range
+                
+                accelSampleCount++;
+            }
+            
+            // Update chart once per packet (16 samples at once) - much more efficient
+            updateChartBatch();
+        }
+        // Update data rate display
+        function updateRateDisplay() {
+            const now = Date.now();
+            const elapsed = (now - lastRateUpdate) / 1000;
+            if (elapsed > 0) {
+                const accelRate = accelSampleCount / elapsed;
+                document.getElementById('accelRate').textContent = accelRate.toFixed(1);
+                accelSampleCount = 0;
+                lastRateUpdate = now;
+            }
+        }
+        // Connect to Bangle.js
+        async function connect() {
+            if (connection) {
+                connection.close();
+                connection = undefined;
+            }
+            
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('statusText').textContent = 'Connecting...';
+            
+            Puck.connect(function (c) {
+                if (!c) {
+                    const errorMsg = document.getElementById('errorMessage');
+                    errorMsg.textContent = '❌ Connection failed: Could not connect to device';
+                    errorMsg.style.display = 'block';
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('statusText').textContent = 'Disconnected';
+                    return;
+                }
+                connection = c;
+                
+                var buf = "";
+                connection.on("data", function (d) {
+                    buf += d;
+                    var l = buf.split("\n");
+                    buf = l.pop();
+                    l.forEach(onLine);
+                });
+                
+                connection.write("reset();\n", function () {
+                    setTimeout(function () {
+                        connection.write("\x03\x10if(1){" + BANGLE_CODE + "}\n", function () {
+                            startTime = performance.now();
+                            sampleCounter = 0;
+                            sampleNumber = 0;
+                            displaySampleNumber = 0;
+                            batchBuffer = { x: [], y: [], z: [], timestamps: [] };
+                            rateUpdateInterval = setInterval(updateRateDisplay, 1000);
+                            
+                            document.getElementById('statusText').textContent = 'Connected';
+                            document.getElementById('statusDot').classList.add('connected');
+                            document.getElementById('connectBtn').textContent = 'Disconnect';
+                            document.getElementById('connectBtn').disabled = false;
+                        });
+                    }, 1500);
+                });
+            });
+        }
+        
+        function onLine(line) {
+            if (line.length < 10) return; // Skip empty or short lines
+            
+            try {
+                // Decode base64 to get 48 bytes
+                var binaryString = atob(line.trim());
+                
+                // Process 16 samples (48 bytes / 3 bytes per sample)
+                for (let i = 0; i < 48; i += 3) {
+                    const x_raw = binaryString.charCodeAt(i);
+                    const y_raw = binaryString.charCodeAt(i + 1);
+                    const z_raw = binaryString.charCodeAt(i + 2);
+                    
+                    // Convert unsigned byte to signed (-128 to 127)
+                    const x_signed = x_raw > 127 ? x_raw - 256 : x_raw;
+                    const y_signed = y_raw > 127 ? y_raw - 256 : y_raw;
+                    const z_signed = z_raw > 127 ? z_raw - 256 : z_raw;
+                    
+                    // Convert to g (assuming +-4g range, so scale = 4/128 = 0.03125g/LSB)
+                    const x_g = x_signed * 0.03125;
+                    const y_g = y_signed * 0.03125;
+                    const z_g = z_signed * 0.03125;
+                    
+                    batchBuffer.x.push(x_g);
+                    batchBuffer.y.push(y_g);
+                    batchBuffer.z.push(z_g);
+                    batchBuffer.timestamps.push(displaySampleNumber);
+                    
+                    sampleNumber++;
+                    displaySampleNumber = sampleNumber % 2000;
+                    accelSampleCount++;
+                }
+                updateChartBatch();
+            } catch (e) {
+                console.error("Error parsing data:", e, line);
+            }
+        }
+        // Disconnect
+        async function disconnect() {
+            if (connection) {
+                connection.close();
+                connection = undefined;
+                onDisconnected();
+            }
+        }
+        // Handle disconnection
+        function onDisconnected() {
+            if (rateUpdateInterval) {
+                clearInterval(rateUpdateInterval);
+                rateUpdateInterval = null;
+            }
+            
+            // Reset state and UI
+            document.getElementById('statusText').textContent = 'Disconnected';
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+            document.getElementById('connectBtn').disabled = false;
+            accelSampleCount = 0;
+            sampleCounter = 0;
+            sampleNumber = 0;
+            displaySampleNumber = 0;
+            startTime = null;
+            batchBuffer = { x: [], y: [], z: [], timestamps: [] };
+            document.getElementById('accelRate').textContent = '0.0';
+        }
+        
+        // Screenshot function - capture chart as image
+        function takeScreenshot() {
+            // Get the canvas element
+            const canvas = document.getElementById('accelChart');
+            // Convert canvas to PNG image URL
+            const imageURL = canvas.toDataURL('image/png');
+            // Create a temporary link element to download
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.download = `accelerometer_${timestamp}.png`;
+            link.href = imageURL;
+            link.click();
+        }
+        // Button click handler
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            if (connection) {
+                disconnect();
+            } else {
+                connect();
+            }
+        });
+        
+        // Screenshot button handler
+        document.getElementById('screenshotBtn').addEventListener('click', takeScreenshot);
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initChart();
+        });
+    </script>
+</body>
+</html>
