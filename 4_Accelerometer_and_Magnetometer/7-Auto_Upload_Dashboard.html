@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bangle.js Sensor Dashboard - Auto Upload</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://www.puck-js.com/puck.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 24px;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #connectBtn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+            font-weight: 600;
+        }
+
+        #connectBtn:hover {
+            background: #5568d3;
+        }
+
+        #connectBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #ccc;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.connected {
+            background: #10b981;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(600px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .sensor-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .sensor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .sensor-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .sensor-rate {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .rate-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .rate-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+            font-family: 'Courier New', monospace;
+        }
+
+        .rate-unit {
+            font-size: 14px;
+            color: #999;
+            margin-left: 4px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-top: 10px;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .legend-color {
+            width: 16px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        footer {
+            background: white;
+            border-radius: 10px;
+            padding: 15px 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .info-message {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #92400e;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            color: #991b1b;
+            display: none;
+        }
+        .back-btn { background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: background 0.3s; font-weight: 600; text-decoration: none; display: inline-block; }
+        .back-btn:hover { background: #4b5563; }
+        .nav-bar { background: rgba(255, 255, 255, 0.95); padding: 15px 30px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-bar">
+            <a href="../index.html" class="back-btn">← Back to Dashboard</a>
+        </div>
+        <header>
+            <div>
+                <h1>🎯 Bangle.js Sensor Dashboard (Auto Upload)</h1>
+                <div class="subtitle">Real-time BLE Sensor Streaming Visualization</div>
+            </div>
+            <div class="connection-status">
+                <div class="status-indicator">
+                    <div class="status-dot" id="statusDot"></div>
+                    <span id="statusText">Disconnected</span>
+                </div>
+                <button id="connectBtn">Connect to Bangle.js</button>
+            </div>
+        </header>
+
+        <div class="error-message" id="errorMessage"></div>
+
+        <div class="sensor-grid">
+            <!-- Accelerometer Card -->
+            <div class="sensor-card">
+                <div class="sensor-header">
+                    <div class="sensor-title">📊 Accelerometer</div>
+                    <div class="sensor-rate">
+                        <div class="rate-label">Data Rate</div>
+                        <div>
+                            <span class="rate-value" id="accelRate">0.0</span>
+                            <span class="rate-unit">Hz</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="accelChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ef4444;"></div>
+                        <span>X-axis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span>Y-axis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span>Z-axis</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Magnetometer Card -->
+            <div class="sensor-card">
+                <div class="sensor-header">
+                    <div class="sensor-title">🧭 Magnetometer</div>
+                    <div class="sensor-rate">
+                        <div class="rate-label">Data Rate</div>
+                        <div>
+                            <span class="rate-value" id="magRate">0.0</span>
+                            <span class="rate-unit">Hz</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="magChart"></canvas>
+                </div>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ef4444;"></div>
+                        <span>X-axis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #10b981;"></div>
+                        <span>Y-axis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #3b82f6;"></div>
+                        <span>Z-axis</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var BANGLE_CODE = `
+            var ACC_SCALE = 1000; // accelerometer: g -> mg
+            Bangle.setCompassPower(1);  // Enable magnetometer
+            
+            // Configure the sensor poll interval
+            Bangle.setPollInterval(10);
+            
+            // Configure magnetometer and accelerometer ODR to 100 Hz
+            Bangle.compassWr(0x31, 0x08);
+            var i2c = new I2C();
+            i2c.setup({scl:14, sda:15});
+            i2c.writeTo(0x1E, [0x18, 0b00101100]);  // Enter standby mode - output range +-4g
+            i2c.writeTo(0x1E, [0x1B, 0x03]);        // Set ODCNTL to 100 Hz
+            i2c.writeTo(0x1E, [0x18, 0b10101100]);  // Return to active mode
+            
+            // Magnetometer event handler
+            Bangle.on('mag', function(d) {
+                // Send as "M,x,y,z"
+                Bluetooth.println("M," + d.x + "," + d.y + "," + d.z);
+            });
+            
+            // Accelerometer event handler
+            Bangle.on('accel', function(d) {
+                // Convert g to mg
+                var x_mg = Math.round(d.x * ACC_SCALE);
+                var y_mg = Math.round(d.y * ACC_SCALE);
+                var z_mg = Math.round(d.z * ACC_SCALE);
+                // Send as "A,x,y,z"
+                Bluetooth.println("A," + x_mg + "," + y_mg + "," + z_mg);
+            });
+        `;
+
+        // UUIDs must match your Bangle.js GATT server
+        const SERVICE_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fac';
+        const MAGNETOMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fae';
+        const ACCELEROMETER_CHAR_UUID = 'f26d62fe-3686-4241-ab06-0dad88068fad';
+        
+        const ACC_SCALE = 1000; // mg to g conversion
+        const MAX_DATA_POINTS = 100; // Show last 100 points on chart
+
+        // State
+        let connection = null;
+        
+        // Data counters for rate calculation
+        let accelCount = 0;
+        let magCount = 0;
+        let lastRateUpdate = Date.now();
+
+        // Chart.js instances
+        let accelChart = null;
+        let magChart = null;
+
+        // Initialize charts
+        function initCharts() {
+            const chartConfig = (title, yAxisLabel, color) => ({
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'X',
+                            data: [],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Y',
+                            data: [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Z',
+                            data: [],
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time (samples)'
+                            },
+                            ticks: {
+                                maxTicksLimit: 10
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: yAxisLabel
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+
+            accelChart = new Chart(
+                document.getElementById('accelChart'),
+                chartConfig('Accelerometer', 'Acceleration (g)')
+            );
+
+            magChart = new Chart(
+                document.getElementById('magChart'),
+                chartConfig('Magnetometer', 'Magnetic Field (µT)')
+            );
+        }
+
+        // Update chart data
+        function updateChart(chart, x, y, z) {
+            const maxPoints = MAX_DATA_POINTS;
+            
+            // Add new data
+            chart.data.datasets[0].data.push(x);
+            chart.data.datasets[1].data.push(y);
+            chart.data.datasets[2].data.push(z);
+            chart.data.labels.push(chart.data.labels.length);
+
+            // Remove old data if exceeds max points
+            if (chart.data.labels.length > maxPoints) {
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+                chart.data.datasets[2].data.shift();
+                chart.data.labels.shift();
+            }
+
+            chart.update('none');
+        }
+
+        // Update data rate displays
+        function updateRates() {
+            const now = Date.now();
+            const elapsed = (now - lastRateUpdate) / 1000;
+            
+            if (elapsed >= 1.0) {
+                const accelRate = accelCount / elapsed;
+                const magRate = magCount / elapsed;
+                
+                document.getElementById('accelRate').textContent = accelRate.toFixed(1);
+                document.getElementById('magRate').textContent = magRate.toFixed(1);
+                
+                accelCount = 0;
+                magCount = 0;
+                lastRateUpdate = now;
+            }
+        }
+
+        // Connect to Bangle.js
+        async function connect() {
+            if (connection) {
+                connection.close();
+                connection = undefined;
+            }
+            
+            document.getElementById('errorMessage').style.display = 'none';
+            document.getElementById('connectBtn').disabled = true;
+            document.getElementById('statusText').textContent = 'Connecting...';
+            
+            console.log("Attempting to connect with Puck.js library...");
+            
+            Puck.connect(function (c) {
+                console.log("Puck.connect callback triggered, connection:", c);
+                if (!c) {
+                    console.error("Connection failed - no device returned");
+                    const errorMsg = document.getElementById('errorMessage');
+                    errorMsg.textContent = '❌ Connection failed: Could not connect to device. Make sure your Bangle.js is on and nearby.';
+                    errorMsg.style.display = 'block';
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('statusText').textContent = 'Disconnected';
+                    return;
+                }
+                console.log("Connection successful!");
+                connection = c;
+                
+                var buf = "";
+                connection.on("data", function (d) {
+                    buf += d;
+                    var l = buf.split("\n");
+                    buf = l.pop();
+                    l.forEach(onLine);
+                });
+                
+                connection.write("reset();\n", function () {
+                    setTimeout(function () {
+                        connection.write("\x03\x10if(1){" + BANGLE_CODE + "}\n", function () {
+                            console.log("Code uploaded successfully!");
+                            lastRateUpdate = Date.now();
+                            accelCount = 0;
+                            magCount = 0;
+                            
+                            document.getElementById('statusText').textContent = 'Connected';
+                            document.getElementById('statusDot').classList.add('connected');
+                            document.getElementById('connectBtn').textContent = 'Disconnect';
+                            document.getElementById('connectBtn').disabled = false;
+                        });
+                    }, 1500);
+                });
+            });
+        }
+
+        function onLine(line) {
+            if (line.length < 3) return;
+            
+            try {
+                // Parse format: "M,x,y,z" for magnetometer or "A,x,y,z" for accelerometer
+                const parts = line.trim().split(',');
+                if (parts.length === 4) {
+                    const type = parts[0];
+                    const x = parseFloat(parts[1]);
+                    const y = parseFloat(parts[2]);
+                    const z = parseFloat(parts[3]);
+                    
+                    if (type === 'M') {
+                        // Magnetometer data (convert to µT)
+                        const x_uT = x * 0.6;
+                        const y_uT = y * 0.6;
+                        const z_uT = z * 0.6;
+                        updateChart(magChart, x_uT, y_uT, z_uT);
+                        magCount++;
+                    } else if (type === 'A') {
+                        // Accelerometer data (convert mg to g)
+                        const x_g = x / ACC_SCALE;
+                        const y_g = y / ACC_SCALE;
+                        const z_g = z / ACC_SCALE;
+                        updateChart(accelChart, x_g, y_g, z_g);
+                        accelCount++;
+                    }
+                    
+                    updateRates();
+                }
+            } catch (e) {
+                console.error("Error parsing data:", e, line);
+            }
+        }
+
+        // Disconnect
+        async function disconnect() {
+            if (connection) {
+                connection.close();
+                connection = undefined;
+                onDisconnected();
+            }
+        }
+
+        // Handle disconnection
+        function onDisconnected() {
+            console.log('Device disconnected');
+            document.getElementById('statusText').textContent = 'Disconnected';
+            document.getElementById('statusDot').classList.remove('connected');
+            document.getElementById('connectBtn').textContent = 'Connect to Bangle.js';
+            document.getElementById('connectBtn').disabled = false;
+            
+            accelCount = 0;
+            magCount = 0;
+            document.getElementById('accelRate').textContent = '0.0';
+            document.getElementById('magRate').textContent = '0.0';
+        }
+
+        // Button click handler
+        document.getElementById('connectBtn').addEventListener('click', () => {
+            if (connection) {
+                disconnect();
+            } else {
+                connect();
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('load', () => {
+            initCharts();
+            console.log('Dashboard ready!');
+        });
+    </script>
+</body>
+</html>
