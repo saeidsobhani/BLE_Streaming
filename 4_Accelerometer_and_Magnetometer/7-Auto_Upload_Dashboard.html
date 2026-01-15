@@ -321,7 +321,6 @@
             
             // Magnetometer event handler
             Bangle.on('mag', function(d) {
-                // Send as "M,x,y,z"
                 Bluetooth.println("M," + d.x + "," + d.y + "," + d.z);
             });
             
@@ -331,7 +330,6 @@
                 var x_mg = Math.round(d.x * ACC_SCALE);
                 var y_mg = Math.round(d.y * ACC_SCALE);
                 var z_mg = Math.round(d.z * ACC_SCALE);
-                // Send as "A,x,y,z"
                 Bluetooth.println("A," + x_mg + "," + y_mg + "," + z_mg);
             });
         `;
