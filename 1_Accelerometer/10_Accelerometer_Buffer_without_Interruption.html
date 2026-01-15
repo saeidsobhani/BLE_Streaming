@@ -282,15 +282,21 @@
             document.getElementById('connectBtn').disabled = true;
             document.getElementById('statusText').textContent = 'Connecting...';
             
+            console.log("Attempting to connect with Puck.js library...");
+            
+            // Force showing device picker by passing null/undefined filters
             Puck.connect(function (c) {
+                console.log("Puck.connect callback triggered, connection:", c);
                 if (!c) {
+                    console.error("Connection failed - no device returned");
                     const errorMsg = document.getElementById('errorMessage');
-                    errorMsg.textContent = '❌ Connection failed: Could not connect to device';
+                    errorMsg.textContent = '❌ Connection failed: Could not connect to device. Make sure your Bangle.js is on and nearby.';
                     errorMsg.style.display = 'block';
                     document.getElementById('connectBtn').disabled = false;
                     document.getElementById('statusText').textContent = 'Disconnected';
                     return;
                 }
+                console.log("Connection successful!");
                 connection = c;
                 
                 var buf = "";
