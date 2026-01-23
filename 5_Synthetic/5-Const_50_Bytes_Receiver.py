@@ -31,12 +31,15 @@ async def main():
         print("Connected. Subscribing to notifications...")
         await client.start_notify(CHAR_UUID, notification_handler)
         global received_bytes, received_packets, start_time
+        start_time = time.time()  # Initialize start time
         while True:
             await asyncio.sleep(1)
             elapsed = time.time() - start_time
             throughput = received_bytes / elapsed  # bytes/sec
             throughput_kbps = (throughput * 8) / 1000  # convert bytes/sec to kilobits/sec
-            print(f"Throughput: {throughput_kbps:.2f} Kbps, Packets: {received_packets} per sec")
+            packets_per_sec = received_packets / elapsed
+            print(f"Throughput: {throughput_kbps:.2f} Kbps, Packets: {received_packets}, Packets/sec: {packets_per_sec:.2f}")
+            # Reset counters AFTER calculation
             received_bytes = 0
             received_packets = 0
             start_time = time.time()
