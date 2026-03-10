@@ -1,7 +1,7 @@
-# Adaptive Optimization of Bluetooth Data Transfer on Wearable Platforms  
-Master's Thesis by [Saeid Sobhani](http://www.linkedin.com/in/saeid-sobhani)  
+# BLE Data Streaming Performance on Wearable Platforms  
+**Master's Thesis (Completed)** by [Saeid Sobhani](http://www.linkedin.com/in/saeid-sobhani)  
 Supervised by: **[Prof. Dr. Kristof Van Laerhoven](https://ubi29.informatik.uni-siegen.de/usi/team_kvl.html)**  
-University of Siegen – Chair for Ubiquitous Computing 
+University of Siegen – Chair for Ubiquitous Computing | 2025-2026 
 
 ---
 
@@ -10,19 +10,19 @@ University of Siegen – Chair for Ubiquitous Computing
 **👉 [Access Interactive Dashboards](https://saeidsobhani.github.io/BLE_Streaming/)**
 
 Experience real-time sensor data streaming directly in your browser! The project includes WebBLE-enabled dashboards for:
-- 📊 **Accelerometer Streaming** - High-frequency 3-axis motion data
-- 🧲 **Magnetometer Streaming** - Magnetic field visualization
-- 💓 **Heart Rate Monitoring** - Dual-rate HRM data
+- 📊 **Accelerometer Streaming** - Up to 1000 Hz high-frequency 3-axis motion data
+- 🧲 **Magnetometer Streaming** - 92 Hz magnetic field visualization
+- 💓 **Heart Rate Monitoring** - 252 Hz dual-rate HRM data
 - 🔄 **Multi-Sensor Fusion** - Combined sensor streaming
 
 > **Note:** Web Bluetooth requires a compatible browser (Chrome, Edge, or Opera) and HTTPS connection.
 
 ---
 
-## �🎯 Project Overview  
-This project investigates how to **optimize Bluetooth Low Energy (BLE) data transmission** between a smartwatch and a host computer using **adaptive compression and quantization methods**.  
+## 📋 Project Overview  
+This thesis investigates the **practical limitations of Bluetooth Low Energy (BLE) data streaming** on wearable devices and develops optimization strategies to maximize sensor streaming throughput. Through systematic empirical evaluation on the **[Bangle.js 1](https://www.espruino.com/Bangle.js)** smartwatch, the research identifies performance bottlenecks and achieves up to **10× throughput improvement** over baseline implementations.
 
-The research focuses on the **[Bangle.js 1](https://www.espruino.com/Bangle.js)** smartwatch platform, equipped with motion and magnetic sensors. The goal is to improve BLE throughput efficiency for streaming sensor data (accelerometer, magnetometer) and visual data (bitmap sequences).
+**Key Finding:** JavaScript interpreter overhead is the primary bottleneck—not BLE protocol limitations. Direct hardware buffer access achieves 1000 Hz streaming, while event-driven approaches reach only 93 Hz.
 
 ---
 
@@ -53,13 +53,20 @@ The research focuses on the **[Bangle.js 1](https://www.espruino.com/Bangle.js)*
 
 ---
 
-## 🧠 Research Goals  
-- Analyze BLE communication limitations on embedded wearable devices.  
-- Design adaptive algorithms to optimize data transmission based on BLE bandwidth and context.  
-- Evaluate BLE throughput and latency when sending:  
-  1. Sensor data (accelerometer + magnetometer).  
-  2. Bitmap sequences to the watch display.  
-- Develop a **WebBLE-based real-time demonstrator** to visualize performance improvements.  
+## 🔬 Key Research Findings  
+
+### Achieved Data Rates
+| Sensor Type | Method | Rate (Hz) |
+|-------------|--------|----------|
+| Accelerometer | Single-sample baseline | 93.1 |
+| Accelerometer | 8-sample bundling | 83.8 |
+| Accelerometer | FIFO interrupt | 895.9 |
+| Accelerometer | Buffer streaming | **1000** |
+| Magnetometer | Direct streaming | 92 |
+| Heart Rate Monitor | Dual-rate | 252 |
+
+### Primary Bottleneck Identified
+**JavaScript interpreter overhead** is the dominant performance constraint, not BLE protocol limitations. The tenfold improvement (93 Hz → 1000 Hz) was achieved through firmware-level optimization that bypasses high-level language abstractions.  
 
 ---
 
@@ -125,29 +132,24 @@ BLE_Streaming/
 
 ## 🔬 Experiment Categories
 
-### **1. Accelerometer Experiments**
-Progressive optimization of accelerometer data streaming:
-- **Single sample direct streaming** - Baseline approach
-- **8-sample bundling** - Reduces BLE overhead by grouping samples
-- **FIFO-based streaming** - Hardware buffer with interruption
-- **Buffer streaming** - Optimized buffering without interruption
+### **1. Accelerometer** - Four Progressive Optimization Methods
+- **Single-sample streaming** (93.1 Hz) - Baseline
+- **8-sample bundling** (83.8 Hz) - Demonstrates firmware overhead issue
+- **FIFO interrupt** (895.9 Hz) - Hardware buffer polling
+- **Buffer streaming** (1000 Hz) - Direct hardware access ✓ Best
 
-### **2. Magnetometer Experiments**
-Standalone 3-axis magnetometer streaming at 100 Hz
+### **2. Magnetometer** - Hardware-limited Streaming
+- Direct streaming achieving 92 Hz (sensor maximum: 100 Hz)
 
-### **3. Heart Rate Monitor (HRM)**
-Dual-rate streaming testing:
-- Analog raw data at 200 Hz
-- Processed HRM data at 50 Hz
+### **3. Heart Rate Monitor** - Dual-rate Testing
+- Raw analog and processed HRM data at 252 Hz combined rate
 
-### **4. Multi-Sensor Fusion**
-Different strategies for streaming multiple sensors:
-- **Two characteristics** - Separate BLE characteristics per sensor
-- **One characteristic unbundled** - Combined but sent separately
-- **One characteristic bundled** - 4 samples bundled for efficiency
+### **4. Multi-Sensor Fusion** - Combined Streaming Strategies
+- Two characteristics vs. one characteristic (bundled/unbundled)
+- Trade-offs between separate streams and combined payloads
 
-### **5. Synthetic Data Tests**
-Controlled testing with synthetic data for throughput benchmarking
+### **5. Synthetic Data** - Controlled Benchmarking
+- Throughput testing with synthetic data patterns
 
 ---
 
@@ -163,11 +165,46 @@ The web dashboards are automatically hosted via GitHub Pages. To enable:
 The `index.html` in the root directory serves as the main landing page with links to all experiments.
 
 ---
+## 🎯 Key Contributions
 
-## 📊 Expected Outcomes  
-- A working prototype that adaptively optimizes BLE data transmission for wearables.  
-- Quantitative performance improvements (throughput, latency).  
-- Insights into the trade-offs between data fidelity, sampling rate, and BLE bandwidth.  
+1. **Empirical BLE performance characterization** on smartwatch hardware
+2. **Identification of JavaScript overhead** as primary bottleneck (not BLE protocol)
+3. **10× throughput improvement** through hardware-firmware co-design
+4. **Open-source implementations** for four accelerometer streaming methods
+5. **WebBLE dashboards** for platform-independent real-time visualization
+6. **Performance baselines** for wearable sensing applications
+
+---
+## � Thesis Documentation
+
+The complete thesis document is available in the `Theis's Report/` directory, including:
+- Detailed BLE protocol analysis
+- Implementation descriptions for all streaming methods
+- Comprehensive performance evaluation
+- Identification of bottlenecks and optimization strategies
+
+## 📚 Citation
+
+If you use this work in your research, please cite:
+```
+Sobhani, S. (2026). BLE Data Streaming Performance on Wearable Platforms.
+Master's Thesis, University of Siegen.
+```
+
+---
+
+## 📝 License
+
+This project is open-source and available for academic and research purposes. All code is provided as-is for reproducibility and educational use.
+
+---
+
+## 👥 Contact
+
+For questions or collaboration:
+- **Author:** [Saeid Sobhani](http://www.linkedin.com/in/saeid-sobhani)
+- **Supervisor:** [Prof. Dr. Kristof Van Laerhoven](https://ubi29.informatik.uni-siegen.de/usi/team_kvl.html)
+- **Repository:** [github.com/saeidsobhani/BLE_Streaming](https://github.com/saeidsobhani/BLE_Streaming)  
 
 ---
 
