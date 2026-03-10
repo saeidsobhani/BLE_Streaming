@@ -30,10 +30,9 @@ This thesis investigates the **practical limitations of Bluetooth Low Energy (BL
 
 ### **Option 1: Web Dashboards (Easiest)**
 1. Visit the [Live Dashboard](https://saeidsobhani.github.io/BLE_Streaming/)
-2. Open the [Espruino Web IDE](https://www.espruino.com/ide/) in another tab
-3. Upload the corresponding `.js` file to your Bangle.js
-4. Return to the dashboard and click "Connect to Bangle.js"
-5. Watch real-time data streaming!
+2. Choose one of the options and click "Connect to Bangle.js"
+3. Watch real-time data streaming!
+
 
 ### **Option 2: Python Receivers (For Data Analysis)**
 1. Clone this repository:
@@ -45,7 +44,7 @@ This thesis investigates the **practical limitations of Bluetooth Low Energy (BL
    ```bash
    pip install bleak numpy
    ```
-3. Upload a GATT server script to Bangle.js using [Espruino IDE](https://www.espruino.com/ide/)
+3. Upload a GATT server script ( `.js` files ) to Bangle.js using [Espruino IDE](https://www.espruino.com/ide/)
 4. Run the corresponding Python receiver:
    ```bash
    python 1_Accelerometer/2_Single_Sample_Direct_Streaming_Receiver.py
@@ -152,19 +151,6 @@ BLE_Streaming/
 - Throughput testing with synthetic data patterns
 
 ---
-
-## 🌐 Deploying to GitHub Pages
-
-The web dashboards are automatically hosted via GitHub Pages. To enable:
-
-1. Go to your repository **Settings** → **Pages**
-2. Under **Source**, select `main` branch and `/ (root)` folder
-3. Click **Save**
-4. Your dashboards will be available at: `https://saeidsobhani.github.io/BLE_Streaming/`
-
-The `index.html` in the root directory serves as the main landing page with links to all experiments.
-
----
 ## 🎯 Key Contributions
 
 1. **Empirical BLE performance characterization** on smartwatch hardware
@@ -174,38 +160,6 @@ The `index.html` in the root directory serves as the main landing page with link
 5. **WebBLE dashboards** for platform-independent real-time visualization
 6. **Performance baselines** for wearable sensing applications
 
----
-## � Thesis Documentation
 
-The complete thesis document is available in the `Theis's Report/` directory, including:
-- Detailed BLE protocol analysis
-- Implementation descriptions for all streaming methods
-- Comprehensive performance evaluation
-- Identification of bottlenecks and optimization strategies
-
-## 📚 Citation
-
-If you use this work in your research, please cite:
-```
-Sobhani, S. (2026). BLE Data Streaming Performance on Wearable Platforms.
-Master's Thesis, University of Siegen.
-```
-
----
-
-## 📝 License
-
-This project is open-source and available for academic and research purposes. All code is provided as-is for reproducibility and educational use.
-
----
-
-## 👥 Contact
-
-For questions or collaboration:
-- **Author:** [Saeid Sobhani](http://www.linkedin.com/in/saeid-sobhani)
-- **Supervisor:** [Prof. Dr. Kristof Van Laerhoven](https://ubi29.informatik.uni-siegen.de/usi/team_kvl.html)
-- **Repository:** [github.com/saeidsobhani/BLE_Streaming](https://github.com/saeidsobhani/BLE_Streaming)  
-
----
 
 
