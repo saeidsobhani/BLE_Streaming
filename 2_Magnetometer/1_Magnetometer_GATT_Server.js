@@ -3,7 +3,7 @@ Bangle.setCompassPower(1);  // Enable magnetometer
 Bangle.setPollInterval(10);// Configure the sensor poll interval.
 
 //  Configure magnetometer ODR to 100 Hz
-Bangle.compassWr(0x31, 0x08);
+Bangle.compassWr(0x31, 0x08); //set cntl2 register
 
 // Track BLE connection status
 NRF.on('connect', function() {
